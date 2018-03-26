@@ -1,3 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">LogoMotion</string>
+    <string name="select_photo">Select Photo</string>
+    <string name="take_photo">Take Photo</string>
+    <string name="choose_from_gallery">Choose from Gallery</string>
+    <string name="cancel">Cancel</string>
+    <string name="camera_icon">Camera Icon</string>
+    <string name="logo_motion_image_name">logomotion</string>
+    <string name="logo_motion_image_extension">jpg</string>
 </resources>
