@@ -15,9 +15,12 @@ import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.util.Pair;
+import android.util.SparseIntArray;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -25,15 +28,19 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.Random;
+
 
 public class LogoMotionActivity extends AppCompatActivity {
 
     private int REQUEST_CAMERA = 0;
     private int SELECT_FILE = 1;
-    private String userChoosenTask = "";
+    private String userChosenTask = "";
     private ImageView ivImage;
     private Button imageBtnSelect;
+    private TextView debugWindow;
     private String TAKE_PHOTO;
     private String CHOOSE_FROM_GALLERY;
     private String CANCEL;
@@ -45,6 +52,7 @@ public class LogoMotionActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_logo_motion);
+        debugWindow = (TextView) findViewById(R.id.debugWindow);
         imageBtnSelect = (Button) findViewById(R.id.imageBtnSelect);
         TAKE_PHOTO = getString(R.string.take_photo);
         CHOOSE_FROM_GALLERY = getString(R.string.choose_from_gallery);
@@ -58,6 +66,7 @@ public class LogoMotionActivity extends AppCompatActivity {
             }
         });
         ivImage = (ImageView) findViewById(R.id.ivImage);
+
     }
 
     /*when the button is clicked, it will give option to either
@@ -72,11 +81,11 @@ public class LogoMotionActivity extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int item) {
                 boolean result = Utility.checkPermission(LogoMotionActivity.this);
                 if (items[item].equals(TAKE_PHOTO)) {
-                    userChoosenTask = TAKE_PHOTO;
+                    userChosenTask = TAKE_PHOTO;
                     if (result)
                         cameraIntent();
                 } else if (items[item].equals(CHOOSE_FROM_GALLERY)) {
-                    userChoosenTask = CHOOSE_FROM_GALLERY;
+                    userChosenTask = CHOOSE_FROM_GALLERY;
                     if (result)
                         galleryIntent();
                 } else if (items[item].equals(CANCEL)) {
@@ -107,9 +116,9 @@ public class LogoMotionActivity extends AppCompatActivity {
         switch (requestCode) {
             case Utility.MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    if (userChoosenTask.equals("Take Photo"))
+                    if (userChosenTask.equals("Take Photo"))
                         cameraIntent();
-                    else if (userChoosenTask.equals("Choose from Library"))
+                    else if (userChosenTask.equals("Choose from Library"))
                         galleryIntent();
                 } else {
                     //code for deny
@@ -140,6 +149,8 @@ public class LogoMotionActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
+        bm = bm.copy(Bitmap.Config.ARGB_8888, true);
+        bm = manipulateBitmapV2(bm);
         ivImage.setImageBitmap(bm);
     }
 
@@ -165,10 +176,12 @@ public class LogoMotionActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
+
+        bmp = manipulateBitmapV2(bmp);
         ivImage.setImageBitmap(bmp);
     }
 
-    private void makeImageAvailableToOthers(File userImage){
+    private void makeImageAvailableToOthers(File userImage) {
 
         // Tell the media scanner about the new file so that it is
         // immediately available to the user.
@@ -181,4 +194,121 @@ public class LogoMotionActivity extends AppCompatActivity {
                     }
                 });
     }
+
+    public double colorDistance(int x, int y){
+        //3D Cartesian Distance formula
+        int[] rgb_x = {((x >> 16) & 0xff), ((x >> 8) & 0xff), (x & 0xff)};
+        int[] rgb_y = {((y >> 16) & 0xff), ((y >> 8) & 0xff), (y & 0xff)};
+
+        double sum = 0.0;
+        for(int i = 0; i < 3; i++){
+            sum = sum + Math.pow((rgb_y[i]-rgb_x[i]),2);
+        }
+        return Math.sqrt(sum);
+    }
+
+    public int roundColor(int color){
+        int[] rgb = {((color >> 16) & 0xff), ((color >> 8) & 0xff), (color & 0xff)};
+
+        // if colors are not relatively close enough, assign to new color
+        for(int i = 0; i < rgb.length; i++) {
+            if (rgb[i] >= 0 && rgb[i] < 32) {
+                rgb[i] = 0;
+            } else if (rgb[i] >= 32 && rgb[i] < 96) {
+                rgb[i] = 64;
+            } else if (rgb[i] >= 96 && rgb[i] < 160) {
+                rgb[i] = 128;
+            } else if (rgb[i] >= 160 && rgb[i] < 224) {
+                rgb[i] = 192;
+            } else if (rgb[i] >= 224) {
+                rgb[i] = 255;
+            }
+
+        }
+        return (rgb[0] << 16) + (rgb[1] << 8) + (rgb[2]);
+    }
+
+
+    public Bitmap manipulateBitmapV2(Bitmap bmp){
+        int height = bmp.getHeight();
+        int width = bmp.getWidth();
+        SparseIntArray colorAssignments = new SparseIntArray();
+        ArrayList<Integer> topColors = new ArrayList<>();
+        int k = 3; //number of topColors to find
+
+        int pixel, pixel_assignment;
+        int value;
+
+        for(int x = 0; x < width; x++){
+            for(int y = 0; y < height; y++) {
+                //Get pixel color
+                pixel = bmp.getPixel(x, y) & 0xFFFFFF; //isolate the last 3 bytes
+
+                //Round pixel color
+                pixel_assignment = roundColor(pixel);
+
+                //Record assigned value
+                value = colorAssignments.get(pixel_assignment);
+                if(value == 0){
+                    value = 1;
+                } else{
+                    value++;
+                }
+                colorAssignments.put(pixel_assignment,value);
+
+                //Change Pixel to assignment
+                bmp.setPixel(x,y,pixel_assignment);
+            }
+        }
+
+        //Get top k colors
+        int highestValue, highestIndex;
+
+        for(int i = 0; i < k; i++){
+            highestValue = -1;
+            highestIndex = 0;
+            for(int j = 0; j < colorAssignments.size(); j++){
+                value = colorAssignments.valueAt(j);
+                if(value > highestValue){
+                    highestValue = value;
+                    highestIndex = j;
+                }
+            }
+            topColors.add(colorAssignments.keyAt(highestIndex));
+            Log.d("jcs12c",String.format("Position #%d ... color: #%06X ... count = %d",i+1,colorAssignments.keyAt(highestIndex), highestValue));
+            colorAssignments.removeAt(highestIndex);
+        }
+
+        /* Note: the reassign-method is very accurate, but extremely slow. I will continue work on
+        optimizing it later.
+         */
+/*
+        //Reassign pixels using top 3 colors
+        double minDistance;
+        double distance;
+        int bestMatchIndex = -1;
+
+        for(int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                Log.d("jcs12c",".");
+                minDistance = (double)(0xFF * 3 + 1);
+                pixel = bmp.getPixel(x, y) & 0xFFFFFF;
+
+                for(int j = 0; j < k; j++){
+                    distance = colorDistance(pixel,topColors.get(j));
+                    if(distance < minDistance){
+                        minDistance = distance;
+                        bestMatchIndex = j;
+                    }
+                }
+                //Change Pixel to assignment
+                bmp.setPixel(x,y,topColors.get(bestMatchIndex));
+            }
+        }
+*/
+
+        return bmp;
+    }
+
+
 }

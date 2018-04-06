@@ -31,10 +31,16 @@
 
         <ImageView
             android:id="@+id/ivImage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
             android:contentDescription="@string/camera_icon"
             android:src="@drawable/ic_photo_camera_black_24dp" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/debugWindow"
+        android:layout_width="match_parent"
+        android:layout_height="146dp"
+        android:text="this is a debug window" />
 
 </LinearLayout>
