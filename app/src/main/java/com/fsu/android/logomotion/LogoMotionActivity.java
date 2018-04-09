@@ -35,6 +35,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Random;
 
+import com.fsu.android.logomotion.ColorData;
+
 
 public class LogoMotionActivity extends AppCompatActivity {
 
@@ -215,22 +217,15 @@ public class LogoMotionActivity extends AppCompatActivity {
         //3D Cartesian Distance formula
         int[] rgb_x = {((x >> 16) & 0xff), ((x >> 8) & 0xff), (x & 0xff)};
         int[] rgb_y = {((y >> 16) & 0xff), ((y >> 8) & 0xff), (y & 0xff)};
-        //distance, change1, change2, change3, plusMinus1, plusMinus2, plusMinus3
-        double[] returnList = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        double[] returnList = {0.0, 0.0, 0.0, 0.0};
 
         double sum = 0.0;
         int diff;
         for(int i = 0; i < 3; i++){
             diff = rgb_y[i] - rgb_x[i];
-            //if value increased, you will need to SUBTRACT when going backwards, so set as 0
-            //if value decreased, you will need to ADD when going backwards, so set as 1
-            if (diff >= 0){
-                //plusMinus segment
-                returnList[i+4] = 0;
-            }
-            //change segment
-            returnList[i+1] = Math.abs(diff);
+            returnList[i+1] = diff;
             sum = sum + Math.pow(diff,2);
+
         }
         returnList[0] = Math.sqrt(sum);
         return returnList;
@@ -259,26 +254,20 @@ public class LogoMotionActivity extends AppCompatActivity {
     }
 
     public Bitmap manipulateBitmap(Bitmap bmp, int k){
-        /* changeMap : each pixel will have 3 bytes which represent the absolute value of the
-                       difference between the original pixel and the pixel assignment. All values
-                       here are positive.
-
-           plusMinusMap : each pixel will have 3 bytes in which each component is either 0 or 1.
-
-           Example: if original Red component value is 255 and assignment is 0, difference is -255
-                      changeMap will get Red component value abs(-255) = 255
-                      plusMinusMap will get Red component value 1, indicating addition later on
-         */
-
         int height = bmp.getHeight();
         int width = bmp.getWidth();
         SparseIntArray colorAssignments = new SparseIntArray();
         ArrayList<Integer> topColors = new ArrayList<>();
-        Bitmap changeMap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
-        Bitmap plusMinusMap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
-
         int pixel, pixel_assignment;
         int value;
+
+        //Init and construct colorData
+        ColorData[][] colorData = new ColorData[width][height];
+        for(int x = 0; x < width; x++){
+            for(int y = 0; y < height; y++){
+                colorData[x][y] = new ColorData();
+            }
+        }
 
         for(int x = 0; x < width; x++){
             for(int y = 0; y < height; y++) {
@@ -321,8 +310,7 @@ public class LogoMotionActivity extends AppCompatActivity {
         double distance;
         int bestMatchIndex = -1;
         double[] returnList;
-        int changePixel = 0;
-        int plusMinusPixel = 0;
+        int[] changeValues = {0,0,0};
 
         for(int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
@@ -330,7 +318,7 @@ public class LogoMotionActivity extends AppCompatActivity {
                 pixel = bmp.getPixel(x, y) & 0xFFFFFF;
 
                 for(int j = 0; j < k; j++){
-                    //distance, change1, change2, change3, plusMinus1, plusMinus2, plusMinus3
+                    //distance, change1, change2, change3
                     returnList = colorDistance(pixel,topColors.get(j));
                     //Get Cartesian distance between pixels
                     distance = returnList[0];
@@ -338,15 +326,13 @@ public class LogoMotionActivity extends AppCompatActivity {
                     if(distance < minDistance){
                         minDistance = distance;
                         bestMatchIndex = j;
-                        //Create and set pixel for change bitmap/matrix
-                        changePixel = (((int)returnList[1]) << 16) + (((int)returnList[2]) << 8) + ((int)returnList[3]);
-                        //Create and set pixel for plusMinus bitmap/matrix
-                        plusMinusPixel = (((int)returnList[4]) << 16) + (((int)returnList[5]) << 8) + ((int)returnList[6]);
+                        for(int i = 0; i < 3; i++) {
+                            changeValues[i] = (int) returnList[i];
+                        }
                     }
                 }
-                //Set pixels in special Bitmaps to values corresponding with the best matched topColor
-                changeMap.setPixel(x,y,changePixel);
-                plusMinusMap.setPixel(x,y,plusMinusPixel);
+                //Record data in colorDat matrix
+                colorData[x][y].set(bestMatchIndex,changeValues);
 
                 //Change Pixel to assignment
                 bmp.setPixel(x,y,topColors.get(bestMatchIndex));
@@ -365,6 +351,12 @@ public class LogoMotionActivity extends AppCompatActivity {
             ImageView topColorX = (ImageView) TOP_COLORS_LAYOUT.getChildAt(i);
             topColorX.setVisibility(View.GONE);
         }
+
+
+
+
+        
+
 
         return bmp;
     }
