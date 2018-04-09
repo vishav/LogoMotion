@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
@@ -20,6 +21,7 @@ import android.util.SparseIntArray;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 import android.widget.TextView;
 
@@ -41,20 +43,19 @@ public class LogoMotionActivity extends AppCompatActivity {
     private String userChosenTask = "";
     private ImageView ivImage;
     private Button imageBtnSelect;
-    private TextView debugWindow;
     private String TAKE_PHOTO;
     private String CHOOSE_FROM_GALLERY;
     private String CANCEL;
     private String LOGO_MOTION_IMAGE_NAME;
     private String LOGO_MOTION_IMAGE_EXTENSION;
     private NumberPicker K_COLOR_PICKER;
+    private LinearLayout TOP_COLORS_LAYOUT;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_logo_motion);
-        debugWindow = (TextView) findViewById(R.id.debugWindow);
         imageBtnSelect = (Button) findViewById(R.id.imageBtnSelect);
         TAKE_PHOTO = getString(R.string.take_photo);
         CHOOSE_FROM_GALLERY = getString(R.string.choose_from_gallery);
@@ -66,12 +67,9 @@ public class LogoMotionActivity extends AppCompatActivity {
         K_COLOR_PICKER.setMinValue(2);
         K_COLOR_PICKER.setMaxValue(5);
         K_COLOR_PICKER.setWrapSelectorWheel(false);
-        /*K_COLOR_PICKER.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
-            @Override
-            public void onValueChange(NumberPicker numberPicker, int oldVal, int newVal) {
-                Log.d("jcs12c",String.format("%d",newVal));
-            }
-        });*/
+        K_COLOR_PICKER.setValue(3);
+
+        TOP_COLORS_LAYOUT = (LinearLayout) findViewById(R.id.topColorsLayout);
 
         imageBtnSelect.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -209,17 +207,35 @@ public class LogoMotionActivity extends AppCompatActivity {
                 });
     }
 
-    public double colorDistance(int x, int y){
+
+
+
+
+    public double[] colorDistance(int x, int y){
         //3D Cartesian Distance formula
         int[] rgb_x = {((x >> 16) & 0xff), ((x >> 8) & 0xff), (x & 0xff)};
         int[] rgb_y = {((y >> 16) & 0xff), ((y >> 8) & 0xff), (y & 0xff)};
+        //distance, change1, change2, change3, plusMinus1, plusMinus2, plusMinus3
+        double[] returnList = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
         double sum = 0.0;
+        int diff;
         for(int i = 0; i < 3; i++){
-            sum = sum + Math.pow((rgb_y[i]-rgb_x[i]),2);
+            diff = rgb_y[i] - rgb_x[i];
+            //if value increased, you will need to SUBTRACT when going backwards, so set as 0
+            //if value decreased, you will need to ADD when going backwards, so set as 1
+            if (diff >= 0){
+                //plusMinus segment
+                returnList[i+4] = 0;
+            }
+            //change segment
+            returnList[i+1] = Math.abs(diff);
+            sum = sum + Math.pow(diff,2);
         }
-        return Math.sqrt(sum);
+        returnList[0] = Math.sqrt(sum);
+        return returnList;
     }
+
 
     public int roundColor(int color){
         int[] rgb = {((color >> 16) & 0xff), ((color >> 8) & 0xff), (color & 0xff)};
@@ -243,10 +259,23 @@ public class LogoMotionActivity extends AppCompatActivity {
     }
 
     public Bitmap manipulateBitmap(Bitmap bmp, int k){
+        /* changeMap : each pixel will have 3 bytes which represent the absolute value of the
+                       difference between the original pixel and the pixel assignment. All values
+                       here are positive.
+
+           plusMinusMap : each pixel will have 3 bytes in which each component is either 0 or 1.
+
+           Example: if original Red component value is 255 and assignment is 0, difference is -255
+                      changeMap will get Red component value abs(-255) = 255
+                      plusMinusMap will get Red component value 1, indicating addition later on
+         */
+
         int height = bmp.getHeight();
         int width = bmp.getWidth();
         SparseIntArray colorAssignments = new SparseIntArray();
         ArrayList<Integer> topColors = new ArrayList<>();
+        Bitmap changeMap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
+        Bitmap plusMinusMap = Bitmap.createBitmap(width,height, Bitmap.Config.ARGB_8888);
 
         int pixel, pixel_assignment;
         int value;
@@ -267,9 +296,6 @@ public class LogoMotionActivity extends AppCompatActivity {
                     value++;
                 }
                 colorAssignments.put(pixel_assignment,value);
-
-                //Change Pixel to assignment
-                //bmp.setPixel(x,y,pixel_assignment);
             }
         }
 
@@ -294,6 +320,9 @@ public class LogoMotionActivity extends AppCompatActivity {
         double minDistance;
         double distance;
         int bestMatchIndex = -1;
+        double[] returnList;
+        int changePixel = 0;
+        int plusMinusPixel = 0;
 
         for(int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
@@ -301,15 +330,40 @@ public class LogoMotionActivity extends AppCompatActivity {
                 pixel = bmp.getPixel(x, y) & 0xFFFFFF;
 
                 for(int j = 0; j < k; j++){
-                    distance = colorDistance(pixel,topColors.get(j));
+                    //distance, change1, change2, change3, plusMinus1, plusMinus2, plusMinus3
+                    returnList = colorDistance(pixel,topColors.get(j));
+                    //Get Cartesian distance between pixels
+                    distance = returnList[0];
+
                     if(distance < minDistance){
                         minDistance = distance;
                         bestMatchIndex = j;
+                        //Create and set pixel for change bitmap/matrix
+                        changePixel = (((int)returnList[1]) << 16) + (((int)returnList[2]) << 8) + ((int)returnList[3]);
+                        //Create and set pixel for plusMinus bitmap/matrix
+                        plusMinusPixel = (((int)returnList[4]) << 16) + (((int)returnList[5]) << 8) + ((int)returnList[6]);
                     }
                 }
+                //Set pixels in special Bitmaps to values corresponding with the best matched topColor
+                changeMap.setPixel(x,y,changePixel);
+                plusMinusMap.setPixel(x,y,plusMinusPixel);
+
                 //Change Pixel to assignment
                 bmp.setPixel(x,y,topColors.get(bestMatchIndex));
             }
+        }
+
+        //Add topColors to Main Screen
+        int topColor;
+        for(int i = 0; i < k; i++){
+            ImageView topColorX = (ImageView) TOP_COLORS_LAYOUT.getChildAt(i);
+            topColor = topColors.get(i);
+            topColorX.setBackgroundColor(Color.rgb((topColor >> 16) & 0xff,(topColor >> 8) & 0xff,topColor & 0xff));
+            topColorX.setVisibility(View.VISIBLE);
+        }
+        for(int i = k; i < TOP_COLORS_LAYOUT.getChildCount(); i++){
+            ImageView topColorX = (ImageView) TOP_COLORS_LAYOUT.getChildAt(i);
+            topColorX.setVisibility(View.GONE);
         }
 
         return bmp;

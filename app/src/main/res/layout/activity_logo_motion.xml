@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/MainLinearLayout"
     android:layout_width="match_parent"
@@ -51,10 +52,43 @@
             android:src="@drawable/ic_photo_camera_black_24dp" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/debugWindow"
+    <LinearLayout
+        android:id="@+id/topColorsLayout"
         android:layout_width="match_parent"
-        android:layout_height="146dp"
-        android:text="this is a debug window" />
+        android:layout_height="70dp"
+        android:gravity="center"
+        android:padding="10dip">
+
+        <ImageView
+            android:id="@+id/topColor1"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <ImageView
+            android:id="@+id/topColor2"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <ImageView
+            android:id="@+id/topColor3"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <ImageView
+            android:id="@+id/topColor4"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <ImageView
+            android:id="@+id/topColor5"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+    </LinearLayout>
 
 </LinearLayout>
