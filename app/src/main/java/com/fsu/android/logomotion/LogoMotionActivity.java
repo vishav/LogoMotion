@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
@@ -37,6 +38,8 @@ import java.util.Random;
 
 import com.fsu.android.logomotion.ColorData;
 
+import org.opencv.core.Mat;
+
 
 public class LogoMotionActivity extends AppCompatActivity {
 
@@ -53,6 +56,10 @@ public class LogoMotionActivity extends AppCompatActivity {
     private NumberPicker K_COLOR_PICKER;
     private LinearLayout TOP_COLORS_LAYOUT;
 
+    //remove it
+    private ImageView ivImage1;
+
+    static{ System.loadLibrary("opencv_java3"); }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +71,8 @@ public class LogoMotionActivity extends AppCompatActivity {
         CANCEL = getString(R.string.cancel);
         LOGO_MOTION_IMAGE_NAME = getString(R.string.logo_motion_image_name);
         LOGO_MOTION_IMAGE_EXTENSION = getString(R.string.logo_motion_image_extension);
+        ivImage = (ImageView) findViewById(R.id.ivImage);
+        ivImage1 = (ImageView) findViewById(R.id.ivImage1);
 
         K_COLOR_PICKER = (NumberPicker) findViewById(R.id.kColorPicker);
         K_COLOR_PICKER.setMinValue(2);
@@ -79,8 +88,6 @@ public class LogoMotionActivity extends AppCompatActivity {
                 takeImage(LogoMotionActivity.this);
             }
         });
-        ivImage = (ImageView) findViewById(R.id.ivImage);
-
     }
 
     /*when the button is clicked, it will give option to either
@@ -118,7 +125,7 @@ public class LogoMotionActivity extends AppCompatActivity {
     private void galleryIntent() {
         Intent intent = new Intent();
         intent.setType("image/*");
-        intent.setAction(Intent.ACTION_GET_CONTENT);
+        intent.setAction(Intent.ACTION_PICK);
         startActivityForResult(Intent.createChooser(intent, "Select File"), SELECT_FILE);
     }
 
@@ -157,16 +164,61 @@ public class LogoMotionActivity extends AppCompatActivity {
     private void onSelectImageFromGallery(Intent data) {
         Bitmap bm = null;
         if (data != null) {
-            try {
-                bm = MediaStore.Images.Media.getBitmap(getApplicationContext().getContentResolver(), data.getData());
-            } catch (IOException e) {
-                e.printStackTrace();
+            long time= System.currentTimeMillis();
+            // First decode with inJustDecodeBounds=true to check dimensions
+            final BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            options.inMutable = true;
+            options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+//            File myFile = new File(data.getData().toString());
+
+            Uri pickedImage = data.getData();
+            String imagePath=Utility.getImagePath(LogoMotionActivity.this, pickedImage);
+//            System.out.println("imagePath:" + imagePath);
+            BitmapFactory.decodeFile(imagePath,options);
+
+            // calculate inSamplesize
+            options.inSampleSize = Utility.calculateInSampleSize(options,ivImage.getWidth(),ivImage.getHeight());
+//            System.out.println("imagewidth:" + options.outWidth);
+//            System.out.println("imageheight:" + options.outHeight);
+//            System.out.println("height:" + ivImage.getHeight());
+//            System.out.println("width:" + ivImage.getWidth());
+//            System.out.println("inSamplesize:"+options.inSampleSize);
+
+            // resize options
+            if(options.outWidth > ivImage.getWidth()){
+                options.outWidth = ivImage.getWidth();
             }
+            if(options.outHeight > ivImage.getHeight()){
+                options.outHeight = ivImage.getHeight();
+            }
+//            System.out.println("imagewidth:" + options.outWidth);
+//            System.out.println("imageheight:" + options.outHeight);
+            // Decode bitmap with inSampleSize set
+            options.inJustDecodeBounds = false;
+            long time1= System.currentTimeMillis();
+//            System.out.println("time before decoding:"+(time1-time));
+            bm = BitmapFactory.decodeFile(imagePath, options);
+            time= System.currentTimeMillis();
+//            System.out.println("time for decoding:"+(time-time1));
+            time1=System.currentTimeMillis();
+//        bm = bm.copy(Bitmap.Config.ARGB_8888, true);
+            bm = manipulateBitmap(bm,K_COLOR_PICKER.getValue());
+            time=System.currentTimeMillis();
+//            System.out.println("time for manipulating:"+(time-time1));
+            time1=System.currentTimeMillis();
+            ivImage.setImageBitmap(bm);
+            time=System.currentTimeMillis();
+//            System.out.println("time in setting bitmap:"+(time-time1));
+            time1=System.currentTimeMillis();
+            Mat edges = Utility.detectBorders(this, ivImage,ivImage1);
+//            System.out.println("time for detecting:"+(System.currentTimeMillis()-time1));
+
+            String shape =Utility.findShape(edges);
+            System.out.println("image shape:"+shape);
         }
-        bm = bm.copy(Bitmap.Config.ARGB_8888, true);
-        bm = manipulateBitmap(bm,K_COLOR_PICKER.getValue());
-        ivImage.setImageBitmap(bm);
     }
+
 
     // add photo to gallery
     private void onTakePhotoFromCamera(Intent data) {
@@ -190,9 +242,10 @@ public class LogoMotionActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-
+        bmp=bmp.copy(Bitmap.Config.ARGB_8888, true);
         bmp = manipulateBitmap(bmp,K_COLOR_PICKER.getValue());
         ivImage.setImageBitmap(bmp);
+        Utility.detectBorders(this, ivImage,ivImage1);
     }
 
     private void makeImageAvailableToOthers(File userImage) {

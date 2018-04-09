@@ -50,6 +50,12 @@
             android:layout_height="200dp"
             android:contentDescription="@string/camera_icon"
             android:src="@drawable/ic_photo_camera_black_24dp" />
+        <ImageView
+            android:id="@+id/ivImage1"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:contentDescription="@string/camera_icon"
+            android:src="@drawable/ic_photo_camera_black_24dp" />
     </LinearLayout>
 
     <LinearLayout
