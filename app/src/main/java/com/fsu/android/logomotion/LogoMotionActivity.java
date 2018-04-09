@@ -20,6 +20,7 @@ import android.util.SparseIntArray;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.NumberPicker;
 import android.widget.TextView;
 
 import java.io.ByteArrayOutputStream;
@@ -46,6 +47,7 @@ public class LogoMotionActivity extends AppCompatActivity {
     private String CANCEL;
     private String LOGO_MOTION_IMAGE_NAME;
     private String LOGO_MOTION_IMAGE_EXTENSION;
+    private NumberPicker K_COLOR_PICKER;
 
 
     @Override
@@ -59,6 +61,18 @@ public class LogoMotionActivity extends AppCompatActivity {
         CANCEL = getString(R.string.cancel);
         LOGO_MOTION_IMAGE_NAME = getString(R.string.logo_motion_image_name);
         LOGO_MOTION_IMAGE_EXTENSION = getString(R.string.logo_motion_image_extension);
+
+        K_COLOR_PICKER = (NumberPicker) findViewById(R.id.kColorPicker);
+        K_COLOR_PICKER.setMinValue(2);
+        K_COLOR_PICKER.setMaxValue(5);
+        K_COLOR_PICKER.setWrapSelectorWheel(false);
+        /*K_COLOR_PICKER.setOnValueChangedListener(new NumberPicker.OnValueChangeListener() {
+            @Override
+            public void onValueChange(NumberPicker numberPicker, int oldVal, int newVal) {
+                Log.d("jcs12c",String.format("%d",newVal));
+            }
+        });*/
+
         imageBtnSelect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -150,7 +164,7 @@ public class LogoMotionActivity extends AppCompatActivity {
             }
         }
         bm = bm.copy(Bitmap.Config.ARGB_8888, true);
-        bm = manipulateBitmapV2(bm);
+        bm = manipulateBitmap(bm,K_COLOR_PICKER.getValue());
         ivImage.setImageBitmap(bm);
     }
 
@@ -177,7 +191,7 @@ public class LogoMotionActivity extends AppCompatActivity {
         }
 
 
-        bmp = manipulateBitmapV2(bmp);
+        bmp = manipulateBitmap(bmp,K_COLOR_PICKER.getValue());
         ivImage.setImageBitmap(bmp);
     }
 
@@ -228,13 +242,11 @@ public class LogoMotionActivity extends AppCompatActivity {
         return (rgb[0] << 16) + (rgb[1] << 8) + (rgb[2]);
     }
 
-
-    public Bitmap manipulateBitmapV2(Bitmap bmp){
+    public Bitmap manipulateBitmap(Bitmap bmp, int k){
         int height = bmp.getHeight();
         int width = bmp.getWidth();
         SparseIntArray colorAssignments = new SparseIntArray();
         ArrayList<Integer> topColors = new ArrayList<>();
-        int k = 3; //number of topColors to find
 
         int pixel, pixel_assignment;
         int value;
@@ -257,13 +269,12 @@ public class LogoMotionActivity extends AppCompatActivity {
                 colorAssignments.put(pixel_assignment,value);
 
                 //Change Pixel to assignment
-                bmp.setPixel(x,y,pixel_assignment);
+                //bmp.setPixel(x,y,pixel_assignment);
             }
         }
 
         //Get top k colors
         int highestValue, highestIndex;
-
         for(int i = 0; i < k; i++){
             highestValue = -1;
             highestIndex = 0;
@@ -279,10 +290,6 @@ public class LogoMotionActivity extends AppCompatActivity {
             colorAssignments.removeAt(highestIndex);
         }
 
-        /* Note: the reassign-method is very accurate, but extremely slow. I will continue work on
-        optimizing it later.
-         */
-/*
         //Reassign pixels using top 3 colors
         double minDistance;
         double distance;
@@ -290,7 +297,6 @@ public class LogoMotionActivity extends AppCompatActivity {
 
         for(int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                Log.d("jcs12c",".");
                 minDistance = (double)(0xFF * 3 + 1);
                 pixel = bmp.getPixel(x, y) & 0xFFFFFF;
 
@@ -305,7 +311,6 @@ public class LogoMotionActivity extends AppCompatActivity {
                 bmp.setPixel(x,y,topColors.get(bestMatchIndex));
             }
         }
-*/
 
         return bmp;
     }
