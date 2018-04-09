@@ -262,10 +262,10 @@ public class LogoMotionActivity extends AppCompatActivity {
         int value;
 
         //Init and construct colorData
-        ColorData[][] colorData = new ColorData[width][height];
+        ColorData[][] colorDataMatrix = new ColorData[width][height];
         for(int x = 0; x < width; x++){
             for(int y = 0; y < height; y++){
-                colorData[x][y] = new ColorData();
+                colorDataMatrix[x][y] = new ColorData();
             }
         }
 
@@ -332,10 +332,10 @@ public class LogoMotionActivity extends AppCompatActivity {
                     }
                 }
                 //Record data in colorDat matrix
-                colorData[x][y].set(bestMatchIndex,changeValues);
+                colorDataMatrix[x][y].set(bestMatchIndex,changeValues);
 
                 //Change Pixel to assignment
-                bmp.setPixel(x,y,topColors.get(bestMatchIndex));
+                //bmp.setPixel(x,y,topColors.get(bestMatchIndex));
             }
         }
 
@@ -352,11 +352,17 @@ public class LogoMotionActivity extends AppCompatActivity {
             topColorX.setVisibility(View.GONE);
         }
 
+        //Primitive method for changing colors of image
+        ArrayList<Integer> newColors = new ArrayList<>();
+        newColors.add(0x0000FF);
+        newColors.add(0x000000);
+        newColors.add(0x00FF00);
 
-
-
-        
-
+        for(int x = 0; x < width; x++){
+            for(int y = 0; y < height; y++){
+                bmp.setPixel(x,y,newColors.get(colorDataMatrix[x][y].getTopColorId()));
+            }
+        }
 
         return bmp;
     }
