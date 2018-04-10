@@ -159,23 +159,28 @@ public class Utility {
         List<MatOfPoint> contours = new ArrayList<>();
         Mat hierarchy = new Mat();
 
-        Imgproc.findContours(edges, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(edges, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
 
         for (MatOfPoint cnt : contours) {
             MatOfPoint2f approxCurve2f = new MatOfPoint2f();
             MatOfPoint2f cnt2f = new MatOfPoint2f();
+            MatOfPoint approxContour = new MatOfPoint();
             cnt.convertTo(cnt2f, CvType.CV_32FC2);
-            Imgproc.approxPolyDP(cnt2f, approxCurve2f, 2, true);
-            System.out.println("contour size:"+approxCurve2f.size().height);
-            if(approxCurve2f.size().height == 3){
+            double epsilon = 0.04*Imgproc.arcLength(cnt2f,true);
+            Imgproc.approxPolyDP(cnt2f, approxCurve2f, epsilon, true);
+            approxCurve2f.convertTo(approxContour, CvType.CV_32S);
+            double size = approxContour.size().height;
+            if(size <3){
+                continue; // if size < 3 , then there is no shape (probably a line of dot)
+            }
+            System.out.println("contour size:"+size);
+            if(size == 3){
                 shape= "triangle";
-            }else if(approxCurve2f.size().height == 4){
+            }else if(size == 4){
                 shape= "square";
-            }else if(approxCurve2f.size().height == 5){
+            }else if(size == 5){
                 shape= "pentagon";
-            }else if(approxCurve2f.size().height == 9){
-                shape= "half-circle";
-            }else if(approxCurve2f.size().height == 15){
+            }else if(size == 15){
                 shape= "circle";
             }
         }

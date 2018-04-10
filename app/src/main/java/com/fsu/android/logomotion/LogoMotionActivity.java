@@ -59,7 +59,9 @@ public class LogoMotionActivity extends AppCompatActivity {
     //remove it
     private ImageView ivImage1;
 
-    static{ System.loadLibrary("opencv_java3"); }
+    static {
+        System.loadLibrary("opencv_java3");
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -164,7 +166,7 @@ public class LogoMotionActivity extends AppCompatActivity {
     private void onSelectImageFromGallery(Intent data) {
         Bitmap bm = null;
         if (data != null) {
-            long time= System.currentTimeMillis();
+            long time = System.currentTimeMillis();
             // First decode with inJustDecodeBounds=true to check dimensions
             final BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
@@ -173,49 +175,56 @@ public class LogoMotionActivity extends AppCompatActivity {
 //            File myFile = new File(data.getData().toString());
 
             Uri pickedImage = data.getData();
-            String imagePath=Utility.getImagePath(LogoMotionActivity.this, pickedImage);
-//            System.out.println("imagePath:" + imagePath);
-            BitmapFactory.decodeFile(imagePath,options);
+            String imagePath = Utility.getImagePath(LogoMotionActivity.this, pickedImage);
+            Log.d("imagePath:", imagePath);
+            BitmapFactory.decodeFile(imagePath, options);
 
-            // calculate inSamplesize
-            options.inSampleSize = Utility.calculateInSampleSize(options,ivImage.getWidth(),ivImage.getHeight());
-//            System.out.println("imagewidth:" + options.outWidth);
-//            System.out.println("imageheight:" + options.outHeight);
-//            System.out.println("height:" + ivImage.getHeight());
-//            System.out.println("width:" + ivImage.getWidth());
-//            System.out.println("inSamplesize:"+options.inSampleSize);
+           /* even if theimage width and height are small
+            manipulateBitmap() is taking a lot of time*/
+            int reqWidth = 100;
+            int reqHeight = 100;
+            /* calculate inSamplesize
+                Multiplying the inSampleSize by 4 to reduce
+                the time taken by manipulatebitmap()
+            */
+            options.inSampleSize = 4*Utility.calculateInSampleSize(options, ivImage.getWidth(), ivImage.getHeight());
+            Log.d("imagewidth:", String.valueOf(options.outWidth));
+            Log.d("imageheight:", String.valueOf(options.outHeight));
+            Log.d("height:", String.valueOf(reqHeight));
+            Log.d("width:", String.valueOf(reqWidth));
+            Log.d("inSamplesize:", String.valueOf(options.inSampleSize));
 
             // resize options
-            if(options.outWidth > ivImage.getWidth()){
-                options.outWidth = ivImage.getWidth();
+            if (options.outWidth > reqWidth) {
+                options.outWidth = reqWidth;
             }
-            if(options.outHeight > ivImage.getHeight()){
-                options.outHeight = ivImage.getHeight();
+            if (options.outHeight > reqHeight) {
+                options.outHeight = reqHeight;
             }
-//            System.out.println("imagewidth:" + options.outWidth);
-//            System.out.println("imageheight:" + options.outHeight);
+            Log.d("imagewidth:", String.valueOf(options.outWidth));
+            Log.d("imageheight:", String.valueOf(options.outHeight));
             // Decode bitmap with inSampleSize set
             options.inJustDecodeBounds = false;
-            long time1= System.currentTimeMillis();
-//            System.out.println("time before decoding:"+(time1-time));
+            long time1 = System.currentTimeMillis();
+            Log.d("time before decoding:", String.valueOf(time1 - time));
             bm = BitmapFactory.decodeFile(imagePath, options);
-            time= System.currentTimeMillis();
-//            System.out.println("time for decoding:"+(time-time1));
-            time1=System.currentTimeMillis();
-//        bm = bm.copy(Bitmap.Config.ARGB_8888, true);
-            bm = manipulateBitmap(bm,K_COLOR_PICKER.getValue());
-            time=System.currentTimeMillis();
-//            System.out.println("time for manipulating:"+(time-time1));
-            time1=System.currentTimeMillis();
+            time = System.currentTimeMillis();
+            Log.d("time for decoding:", String.valueOf(time - time1));
+            time1 = System.currentTimeMillis();
+            // bm = bm.copy(Bitmap.Config.ARGB_8888, true);
+            bm = manipulateBitmap(bm, K_COLOR_PICKER.getValue());
+            time = System.currentTimeMillis();
+            Log.d("time for manipulating:", String.valueOf(time - time1));
+            time1 = System.currentTimeMillis();
             ivImage.setImageBitmap(bm);
-            time=System.currentTimeMillis();
-//            System.out.println("time in setting bitmap:"+(time-time1));
-            time1=System.currentTimeMillis();
-            Mat edges = Utility.detectBorders(this, ivImage,ivImage1);
-//            System.out.println("time for detecting:"+(System.currentTimeMillis()-time1));
+            time = System.currentTimeMillis();
+            Log.d("time in setting bitmap:", String.valueOf(time - time1));
+            time1 = System.currentTimeMillis();
+            Mat edges = Utility.detectBorders(this, ivImage, ivImage1);
+            Log.d("time for detecting:", String.valueOf(System.currentTimeMillis() - time1));
 
-            String shape =Utility.findShape(edges);
-            System.out.println("image shape:"+shape);
+            String shape = Utility.findShape(edges);
+            Log.d("image shape:", String.valueOf(shape));
         }
     }
 
@@ -224,10 +233,10 @@ public class LogoMotionActivity extends AppCompatActivity {
     private void onTakePhotoFromCamera(Intent data) {
         Bitmap bmp = (Bitmap) data.getExtras().get("data");
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        bmp.compress(Bitmap.CompressFormat.JPEG, 90, bytes);
+        bmp.compress(Bitmap.CompressFormat.JPEG, 60, bytes);
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         File userImage = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-                LOGO_MOTION_IMAGE_NAME + "_" + timeStamp + "."+ LOGO_MOTION_IMAGE_EXTENSION);
+                LOGO_MOTION_IMAGE_NAME + "_" + timeStamp + "." + LOGO_MOTION_IMAGE_EXTENSION);
         FileOutputStream fo;
         try {
             userImage.createNewFile();
@@ -242,10 +251,13 @@ public class LogoMotionActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        bmp=bmp.copy(Bitmap.Config.ARGB_8888, true);
-        bmp = manipulateBitmap(bmp,K_COLOR_PICKER.getValue());
+        bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
+        bmp = manipulateBitmap(bmp, K_COLOR_PICKER.getValue());
         ivImage.setImageBitmap(bmp);
-        Utility.detectBorders(this, ivImage,ivImage1);
+        Mat edges = Utility.detectBorders(this, ivImage, ivImage1);
+
+        String shape = Utility.findShape(edges);
+        Log.d("image shape:", String.valueOf(shape));
     }
 
     private void makeImageAvailableToOthers(File userImage) {
@@ -263,10 +275,7 @@ public class LogoMotionActivity extends AppCompatActivity {
     }
 
 
-
-
-
-    public double[] colorDistance(int x, int y){
+    public double[] colorDistance(int x, int y) {
         //3D Cartesian Distance formula
         int[] rgb_x = {((x >> 16) & 0xff), ((x >> 8) & 0xff), (x & 0xff)};
         int[] rgb_y = {((y >> 16) & 0xff), ((y >> 8) & 0xff), (y & 0xff)};
@@ -274,10 +283,10 @@ public class LogoMotionActivity extends AppCompatActivity {
 
         double sum = 0.0;
         int diff;
-        for(int i = 0; i < 3; i++){
+        for (int i = 0; i < 3; i++) {
             diff = rgb_y[i] - rgb_x[i];
-            returnList[i+1] = diff;
-            sum = sum + Math.pow(diff,2);
+            returnList[i + 1] = diff;
+            sum = sum + Math.pow(diff, 2);
 
         }
         returnList[0] = Math.sqrt(sum);
@@ -285,11 +294,11 @@ public class LogoMotionActivity extends AppCompatActivity {
     }
 
 
-    public int roundColor(int color){
+    public int roundColor(int color) {
         int[] rgb = {((color >> 16) & 0xff), ((color >> 8) & 0xff), (color & 0xff)};
 
         // if colors are not relatively close enough, assign to new color
-        for(int i = 0; i < rgb.length; i++) {
+        for (int i = 0; i < rgb.length; i++) {
             if (rgb[i] >= 0 && rgb[i] < 32) {
                 rgb[i] = 0;
             } else if (rgb[i] >= 32 && rgb[i] < 96) {
@@ -306,9 +315,11 @@ public class LogoMotionActivity extends AppCompatActivity {
         return (rgb[0] << 16) + (rgb[1] << 8) + (rgb[2]);
     }
 
-    public Bitmap manipulateBitmap(Bitmap bmp, int k){
+    public Bitmap manipulateBitmap(Bitmap bmp, int k) {
         int height = bmp.getHeight();
         int width = bmp.getWidth();
+        Log.d("manipulateBitmapheight:", String.valueOf(height));
+        Log.d("manipulateBitmapwidth:", String.valueOf(width));
         SparseIntArray colorAssignments = new SparseIntArray();
         ArrayList<Integer> topColors = new ArrayList<>();
         int pixel, pixel_assignment;
@@ -316,14 +327,14 @@ public class LogoMotionActivity extends AppCompatActivity {
 
         //Init and construct colorData
         ColorData[][] colorDataMatrix = new ColorData[width][height];
-        for(int x = 0; x < width; x++){
-            for(int y = 0; y < height; y++){
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
                 colorDataMatrix[x][y] = new ColorData();
             }
         }
 
-        for(int x = 0; x < width; x++){
-            for(int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
                 //Get pixel color
                 pixel = bmp.getPixel(x, y) & 0xFFFFFF; //isolate the last 3 bytes
 
@@ -332,29 +343,29 @@ public class LogoMotionActivity extends AppCompatActivity {
 
                 //Record assigned value
                 value = colorAssignments.get(pixel_assignment);
-                if(value == 0){
+                if (value == 0) {
                     value = 1;
-                } else{
+                } else {
                     value++;
                 }
-                colorAssignments.put(pixel_assignment,value);
+                colorAssignments.put(pixel_assignment, value);
             }
         }
 
         //Get top k colors
         int highestValue, highestIndex;
-        for(int i = 0; i < k; i++){
+        for (int i = 0; i < k; i++) {
             highestValue = -1;
             highestIndex = 0;
-            for(int j = 0; j < colorAssignments.size(); j++){
+            for (int j = 0; j < colorAssignments.size(); j++) {
                 value = colorAssignments.valueAt(j);
-                if(value > highestValue){
+                if (value > highestValue) {
                     highestValue = value;
                     highestIndex = j;
                 }
             }
             topColors.add(colorAssignments.keyAt(highestIndex));
-            Log.d("jcs12c",String.format("Position #%d ... color: #%06X ... count = %d",i+1,colorAssignments.keyAt(highestIndex), highestValue));
+            Log.d("jcs12c", String.format("Position #%d ... color: #%06X ... count = %d", i + 1, colorAssignments.keyAt(highestIndex), highestValue));
             colorAssignments.removeAt(highestIndex);
         }
 
@@ -363,29 +374,29 @@ public class LogoMotionActivity extends AppCompatActivity {
         double distance;
         int bestMatchIndex = -1;
         double[] returnList;
-        int[] changeValues = {0,0,0};
+        int[] changeValues = {0, 0, 0};
 
-        for(int x = 0; x < width; x++) {
+        for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                minDistance = (double)(0xFF * 3 + 1);
+                minDistance = (double) (0xFF * 3 + 1);
                 pixel = bmp.getPixel(x, y) & 0xFFFFFF;
 
-                for(int j = 0; j < k; j++){
+                for (int j = 0; j < k; j++) {
                     //distance, change1, change2, change3
-                    returnList = colorDistance(pixel,topColors.get(j));
+                    returnList = colorDistance(pixel, topColors.get(j));
                     //Get Cartesian distance between pixels
                     distance = returnList[0];
 
-                    if(distance < minDistance){
+                    if (distance < minDistance) {
                         minDistance = distance;
                         bestMatchIndex = j;
-                        for(int i = 0; i < 3; i++) {
+                        for (int i = 0; i < 3; i++) {
                             changeValues[i] = (int) returnList[i];
                         }
                     }
                 }
                 //Record data in colorDat matrix
-                colorDataMatrix[x][y].set(bestMatchIndex,changeValues);
+                colorDataMatrix[x][y].set(bestMatchIndex, changeValues);
 
                 //Change Pixel to assignment
                 //bmp.setPixel(x,y,topColors.get(bestMatchIndex));
@@ -394,13 +405,13 @@ public class LogoMotionActivity extends AppCompatActivity {
 
         //Add topColors to Main Screen
         int topColor;
-        for(int i = 0; i < k; i++){
+        for (int i = 0; i < k; i++) {
             ImageView topColorX = (ImageView) TOP_COLORS_LAYOUT.getChildAt(i);
             topColor = topColors.get(i);
-            topColorX.setBackgroundColor(Color.rgb((topColor >> 16) & 0xff,(topColor >> 8) & 0xff,topColor & 0xff));
+            topColorX.setBackgroundColor(Color.rgb((topColor >> 16) & 0xff, (topColor >> 8) & 0xff, topColor & 0xff));
             topColorX.setVisibility(View.VISIBLE);
         }
-        for(int i = k; i < TOP_COLORS_LAYOUT.getChildCount(); i++){
+        for (int i = k; i < TOP_COLORS_LAYOUT.getChildCount(); i++) {
             ImageView topColorX = (ImageView) TOP_COLORS_LAYOUT.getChildAt(i);
             topColorX.setVisibility(View.GONE);
         }
@@ -411,9 +422,9 @@ public class LogoMotionActivity extends AppCompatActivity {
         newColors.add(0x000000);
         newColors.add(0x00FF00);
 
-        for(int x = 0; x < width; x++){
-            for(int y = 0; y < height; y++){
-                bmp.setPixel(x,y,newColors.get(colorDataMatrix[x][y].getTopColorId()));
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                bmp.setPixel(x, y, newColors.get(colorDataMatrix[x][y].getTopColorId()));
             }
         }
 
