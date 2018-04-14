@@ -17,14 +17,12 @@ import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.util.Pair;
 import android.util.SparseIntArray;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
-import android.widget.TextView;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -34,11 +32,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Random;
-
-import com.fsu.android.logomotion.ColorData;
-
-import org.opencv.core.Mat;
 
 
 public class LogoMotionActivity extends AppCompatActivity {
@@ -166,17 +159,14 @@ public class LogoMotionActivity extends AppCompatActivity {
     private void onSelectImageFromGallery(Intent data) {
         Bitmap bm = null;
         if (data != null) {
-            long time = System.currentTimeMillis();
             // First decode with inJustDecodeBounds=true to check dimensions
             final BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
             options.inMutable = true;
             options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-//            File myFile = new File(data.getData().toString());
 
             Uri pickedImage = data.getData();
             String imagePath = Utility.getImagePath(LogoMotionActivity.this, pickedImage);
-            Log.d("imagePath:", imagePath);
             BitmapFactory.decodeFile(imagePath, options);
 
            /* even if theimage width and height are small
@@ -188,11 +178,6 @@ public class LogoMotionActivity extends AppCompatActivity {
                 the time taken by manipulatebitmap()
             */
             options.inSampleSize = 4*Utility.calculateInSampleSize(options, ivImage.getWidth(), ivImage.getHeight());
-            Log.d("imagewidth:", String.valueOf(options.outWidth));
-            Log.d("imageheight:", String.valueOf(options.outHeight));
-            Log.d("height:", String.valueOf(reqHeight));
-            Log.d("width:", String.valueOf(reqWidth));
-            Log.d("inSamplesize:", String.valueOf(options.inSampleSize));
 
             // resize options
             if (options.outWidth > reqWidth) {
@@ -201,30 +186,17 @@ public class LogoMotionActivity extends AppCompatActivity {
             if (options.outHeight > reqHeight) {
                 options.outHeight = reqHeight;
             }
-            Log.d("imagewidth:", String.valueOf(options.outWidth));
-            Log.d("imageheight:", String.valueOf(options.outHeight));
             // Decode bitmap with inSampleSize set
             options.inJustDecodeBounds = false;
-            long time1 = System.currentTimeMillis();
-            Log.d("time before decoding:", String.valueOf(time1 - time));
-            bm = BitmapFactory.decodeFile(imagePath, options);
-            time = System.currentTimeMillis();
-            Log.d("time for decoding:", String.valueOf(time - time1));
-            time1 = System.currentTimeMillis();
-            // bm = bm.copy(Bitmap.Config.ARGB_8888, true);
-            bm = manipulateBitmap(bm, K_COLOR_PICKER.getValue());
-            time = System.currentTimeMillis();
-            Log.d("time for manipulating:", String.valueOf(time - time1));
-            time1 = System.currentTimeMillis();
-            ivImage.setImageBitmap(bm);
-            time = System.currentTimeMillis();
-            Log.d("time in setting bitmap:", String.valueOf(time - time1));
-            time1 = System.currentTimeMillis();
-            Mat edges = Utility.detectBorders(this, ivImage, ivImage1);
-            Log.d("time for detecting:", String.valueOf(System.currentTimeMillis() - time1));
 
-            String shape = Utility.findShape(edges);
+            bm = BitmapFactory.decodeFile(imagePath, options);
+
+            String shape=Utility.findShape(this, bm, ivImage1);
             Log.d("image shape:", String.valueOf(shape));
+
+            bm = manipulateBitmap(bm, K_COLOR_PICKER.getValue());
+
+            ivImage.setImageBitmap(bm);
         }
     }
 
@@ -252,12 +224,13 @@ public class LogoMotionActivity extends AppCompatActivity {
         }
 
         bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
+
+        // this method returns the shape present in the image.
+        String shape=Utility.findShape(this, bmp, ivImage1);
+        Log.d("image shape:", String.valueOf(shape));
+
         bmp = manipulateBitmap(bmp, K_COLOR_PICKER.getValue());
         ivImage.setImageBitmap(bmp);
-        Mat edges = Utility.detectBorders(this, ivImage, ivImage1);
-
-        String shape = Utility.findShape(edges);
-        Log.d("image shape:", String.valueOf(shape));
     }
 
     private void makeImageAvailableToOthers(File userImage) {
@@ -318,8 +291,6 @@ public class LogoMotionActivity extends AppCompatActivity {
     public Bitmap manipulateBitmap(Bitmap bmp, int k) {
         int height = bmp.getHeight();
         int width = bmp.getWidth();
-        Log.d("manipulateBitmapheight:", String.valueOf(height));
-        Log.d("manipulateBitmapwidth:", String.valueOf(width));
         SparseIntArray colorAssignments = new SparseIntArray();
         ArrayList<Integer> topColors = new ArrayList<>();
         int pixel, pixel_assignment;

@@ -9,13 +9,13 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
+import android.util.Log;
 import android.widget.ImageView;
 
 import org.opencv.android.Utils;
@@ -23,6 +23,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
@@ -64,49 +65,6 @@ public class Utility {
         } else {
             return true;
         }
-    }
-
-    /* detect borders in an image using openCV.
-     */
-    protected static Mat detectBorders(Context context, ImageView iv, ImageView iv1) {
-        Bitmap bmp = ((BitmapDrawable) iv.getDrawable()).getBitmap();
-
-        Mat edges = new Mat();
-        // bitmapToMat requires bitmap of type ARGB_8888 or RGB_565
-        // Bitmap bmp32 = bmp.copy(Bitmap.Config.ARGB_8888, true);
-        Utils.bitmapToMat(bmp, edges);
-
-//        Mat edges = new Mat(mat.size(), CvType.CV_8UC1);
-        Imgproc.cvtColor(edges, edges, Imgproc.COLOR_RGB2GRAY, 4);
-        Imgproc.Canny(edges, edges, 80, 100);
-
-        // Don't do that at home or work it's for visualization purpose.
-        Bitmap resultBitmap = Bitmap.createBitmap(edges.cols(), edges.rows(), Bitmap.Config.ARGB_8888);
-        Utils.matToBitmap(edges, resultBitmap);
-        iv1.setImageBitmap(resultBitmap);
-/*        int height = iv.getHeight();
-        int width = iv.getWidth();
-        List<Integer> x = new ArrayList<>();
-        List<Integer> y = new ArrayList<>();
-        for(int i=0;i<height;i++){
-            @ColorInt
-            int previous_x=0;
-            int previous_y=0;
-            for(int j=0;j<width;j++){
-                @ColorInt
-                int currentPixel=bmp.getPixel(i,j);
-                if(currentPixel != Color.WHITE && bmp.getPixel(previous_x, previous_y) == Color.WHITE){
-                    x.add(j);
-                    y.add(i);
-                    previous_x=0;
-                    previous_y=0;
-                }else {
-                    previous_x = j;
-                    previous_y = i;
-                }
-            }
-        }*/
-        return edges;
     }
 
     public static int calculateInSampleSize(
@@ -153,38 +111,52 @@ public class Utility {
         }
     }
 
-    protected static String findShape(Mat edges) {
+    protected static String findShape(Context context, Bitmap bmp, ImageView iv1) {
 
-        String shape = "";
+        String shape="";
+        Mat edges = new Mat();
+        Utils.bitmapToMat(bmp, edges);
+
         List<MatOfPoint> contours = new ArrayList<>();
         Mat hierarchy = new Mat();
+        double maxArea = 0;
+        double shapeSize=0;
+        Imgproc.cvtColor(edges, edges, Imgproc.COLOR_RGB2GRAY, 0);
+        Imgproc.GaussianBlur(edges, edges, new Size(3, 3), 0);
+        Imgproc.threshold(edges, edges, 60, 255, Imgproc.THRESH_BINARY);
+        Imgproc.findContours(edges, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        Imgproc.findContours(edges, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-
-        for (MatOfPoint cnt : contours) {
+        for (int i=0; i<contours.size();i++) {
             MatOfPoint2f approxCurve2f = new MatOfPoint2f();
             MatOfPoint2f cnt2f = new MatOfPoint2f();
             MatOfPoint approxContour = new MatOfPoint();
+            MatOfPoint cnt=contours.get(i);
             cnt.convertTo(cnt2f, CvType.CV_32FC2);
-            double epsilon = 0.04*Imgproc.arcLength(cnt2f,true);
+            double epsilon = 0.1 * Imgproc.arcLength(cnt2f, true);
             Imgproc.approxPolyDP(cnt2f, approxCurve2f, epsilon, true);
             approxCurve2f.convertTo(approxContour, CvType.CV_32S);
+            double area = Math.abs(Imgproc.contourArea(cnt));
             double size = approxContour.size().height;
-            if(size <3){
-                continue; // if size < 3 , then there is no shape (probably a line of dot)
+            Log.d("image area", String.valueOf(area));
+            Log.d("contour size", String.valueOf(size));
+            Log.d("shape factor", String.valueOf(epsilon*epsilon/(.04*area*4*3.14)));
+            if(area>maxArea && i!=0){
+                maxArea=area;
+                shapeSize=size;
             }
-            System.out.println("contour size:"+size);
-            if(size == 3){
-                shape= "triangle";
-            }else if(size == 4){
-                shape= "square";
-            }else if(size == 5){
-                shape= "pentagon";
-            }else if(size == 15){
-                shape= "circle";
-            }
+            Log.d("final contour size", String.valueOf(size));
         }
 
+        if(shapeSize == 3){
+            shape= "triangle";
+        }else if(shapeSize == 4){
+            shape= "square";
+        }else if(shapeSize == 5){
+            shape= "pentagon";
+        }else{
+            shape= "circle";
+        }
+        Log.d("final shape size", String.valueOf(shapeSize));
         return shape;
     }
 }
