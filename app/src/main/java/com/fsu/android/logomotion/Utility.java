@@ -27,7 +27,9 @@ import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by vishav on 3/24/2018.
@@ -35,6 +37,8 @@ import java.util.List;
 
 public class Utility {
     public static final int MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 123;
+
+    private static final Map<String, String> emotionColorMap = initializeEmotionColorMap();
 
     //    @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
     protected static boolean checkPermission(final Context context) {
@@ -111,7 +115,7 @@ public class Utility {
         }
     }
 
-    protected static String findShape(Context context, Bitmap bmp, ImageView iv1) {
+    protected static String findShape(Context context, Bitmap bmp) {
 
         String shape="";
         Mat edges = new Mat();
@@ -158,5 +162,40 @@ public class Utility {
         }
         Log.d("final shape size", String.valueOf(shapeSize));
         return shape;
+    }
+
+    private static Map<String, String> initializeEmotionColorMap()
+    {
+        Map<String,String> emotionColorMap = new HashMap<String,String>();
+        emotionColorMap.put("attention", "Orange");
+        emotionColorMap.put("creative", "Orange");
+        emotionColorMap.put("enthusiastic", "Orange");
+        emotionColorMap.put("urgent", "Red");
+        emotionColorMap.put("exciting", "Red");
+        emotionColorMap.put("aggressive", "Red");
+        emotionColorMap.put("appetite", "Red");
+        emotionColorMap.put("love", "Red");
+        emotionColorMap.put("impressive", "Purple");
+        emotionColorMap.put("wisdom", "Purple");
+        emotionColorMap.put("royal", "Purple");
+        emotionColorMap.put("calm", "Blue");
+        emotionColorMap.put("intelligence", "Blue");
+        emotionColorMap.put("confidence", "Blue");
+        emotionColorMap.put("growth", "Green");
+        emotionColorMap.put("peaceful", "Green");
+        emotionColorMap.put("innocence", "White");
+        emotionColorMap.put("pure", "White");
+        emotionColorMap.put("professional", "Black");
+        emotionColorMap.put("power", "Black");
+        emotionColorMap.put("cheerfulness", "Yellow");
+        emotionColorMap.put("optimism", "Yellow");
+
+
+        return emotionColorMap;
+    }
+
+
+    protected static String getColorFromEmotions(String emotion){
+        return emotionColorMap.get(emotion);
     }
 }

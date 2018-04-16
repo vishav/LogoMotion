@@ -8,5 +8,14 @@
     <string name="camera_icon">Camera Icon</string>
     <string name="logo_motion_image_name">logomotion</string>
     <string name="logo_motion_image_extension">jpg</string>
-
+    <string-array name="emotions_array">
+        <item>Happiness</item>
+        <item>Sad</item>
+        <item>Aggressive</item>
+        <item>Growth</item>
+        <item>Royal</item>
+        <item>Appetite</item>
+        <item>Pure</item>
+        <item>Growth</item>
+    </string-array>
 </resources>

@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
@@ -19,10 +20,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.util.SparseIntArray;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
+import android.widget.Spinner;
+import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -34,12 +40,12 @@ import java.util.ArrayList;
 import java.util.Date;
 
 
-public class LogoMotionActivity extends AppCompatActivity {
+public class LogoMotionActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
 
     private int REQUEST_CAMERA = 0;
     private int SELECT_FILE = 1;
     private String userChosenTask = "";
-    private ImageView ivImage;
+    private ImageView ivImage, ivImage2;
     private Button imageBtnSelect;
     private String TAKE_PHOTO;
     private String CHOOSE_FROM_GALLERY;
@@ -48,9 +54,11 @@ public class LogoMotionActivity extends AppCompatActivity {
     private String LOGO_MOTION_IMAGE_EXTENSION;
     private NumberPicker K_COLOR_PICKER;
     private LinearLayout TOP_COLORS_LAYOUT;
-
-    //remove it
-    private ImageView ivImage1;
+    private LinearLayout NEW_COLORS_LAYOUT;
+    private CheckBox MANIPULATE_TYPE_CHECKBOX;
+    private Button RUN_AGAIN_BUTTON;
+    private Boolean IVIMAGE_HAS_BITMAP;
+    private Spinner emotionSpinner;
 
     static {
         System.loadLibrary("opencv_java3");
@@ -61,13 +69,15 @@ public class LogoMotionActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_logo_motion);
         imageBtnSelect = (Button) findViewById(R.id.imageBtnSelect);
+        RUN_AGAIN_BUTTON = (Button) findViewById(R.id.runAgainButton);
         TAKE_PHOTO = getString(R.string.take_photo);
         CHOOSE_FROM_GALLERY = getString(R.string.choose_from_gallery);
         CANCEL = getString(R.string.cancel);
         LOGO_MOTION_IMAGE_NAME = getString(R.string.logo_motion_image_name);
         LOGO_MOTION_IMAGE_EXTENSION = getString(R.string.logo_motion_image_extension);
-        ivImage = (ImageView) findViewById(R.id.ivImage);
-        ivImage1 = (ImageView) findViewById(R.id.ivImage1);
+
+        MANIPULATE_TYPE_CHECKBOX = (CheckBox) findViewById(R.id.manipulateTypeCheckBox);
+        IVIMAGE_HAS_BITMAP = false;
 
         K_COLOR_PICKER = (NumberPicker) findViewById(R.id.kColorPicker);
         K_COLOR_PICKER.setMinValue(2);
@@ -76,11 +86,44 @@ public class LogoMotionActivity extends AppCompatActivity {
         K_COLOR_PICKER.setValue(3);
 
         TOP_COLORS_LAYOUT = (LinearLayout) findViewById(R.id.topColorsLayout);
+        NEW_COLORS_LAYOUT = (LinearLayout) findViewById(R.id.newColorsLayout);
+
+        ivImage = (ImageView) findViewById(R.id.ivImage);
+        ivImage2 = (ImageView) findViewById(R.id.ivImage2);
+
+        emotionSpinner = (Spinner) findViewById(R.id.emotion_spinner);
+
+        constructEmotionSpinner();
+
+        emotionSpinner.setOnItemSelectedListener(this);
 
         imageBtnSelect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 takeImage(LogoMotionActivity.this);
+            }
+        });
+        RUN_AGAIN_BUTTON.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (IVIMAGE_HAS_BITMAP) {
+                    Bitmap bmp = ((BitmapDrawable) ivImage.getDrawable()).getBitmap();
+                    bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
+                    bmp = manipulateBitmap(bmp, K_COLOR_PICKER.getValue());
+
+                    ivImage2.setImageBitmap(bmp);
+                } else {
+                    AlertDialog alertDialog = new AlertDialog.Builder(LogoMotionActivity.this).create();
+                    alertDialog.setTitle("Alert");
+                    alertDialog.setMessage("Please choose an image first.");
+                    alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            });
+                    alertDialog.show();
+                }
             }
         });
     }
@@ -177,7 +220,7 @@ public class LogoMotionActivity extends AppCompatActivity {
                 Multiplying the inSampleSize by 4 to reduce
                 the time taken by manipulatebitmap()
             */
-            options.inSampleSize = 4*Utility.calculateInSampleSize(options, ivImage.getWidth(), ivImage.getHeight());
+            options.inSampleSize = 4 * Utility.calculateInSampleSize(options, ivImage.getWidth(), ivImage.getHeight());
 
             // resize options
             if (options.outWidth > reqWidth) {
@@ -190,13 +233,14 @@ public class LogoMotionActivity extends AppCompatActivity {
             options.inJustDecodeBounds = false;
 
             bm = BitmapFactory.decodeFile(imagePath, options);
-
-            String shape=Utility.findShape(this, bm, ivImage1);
+            ivImage.setImageBitmap(bm);
+            IVIMAGE_HAS_BITMAP = true;
+            String shape = Utility.findShape(this, bm);
             Log.d("image shape:", String.valueOf(shape));
 
             bm = manipulateBitmap(bm, K_COLOR_PICKER.getValue());
 
-            ivImage.setImageBitmap(bm);
+            ivImage2.setImageBitmap(bm);
         }
     }
 
@@ -224,13 +268,14 @@ public class LogoMotionActivity extends AppCompatActivity {
         }
 
         bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
-
+        ivImage.setImageBitmap(bmp);
+        IVIMAGE_HAS_BITMAP = true;
         // this method returns the shape present in the image.
-        String shape=Utility.findShape(this, bmp, ivImage1);
+        String shape = Utility.findShape(this, bmp);
         Log.d("image shape:", String.valueOf(shape));
 
         bmp = manipulateBitmap(bmp, K_COLOR_PICKER.getValue());
-        ivImage.setImageBitmap(bmp);
+        ivImage2.setImageBitmap(bmp);
     }
 
     private void makeImageAvailableToOthers(File userImage) {
@@ -370,7 +415,7 @@ public class LogoMotionActivity extends AppCompatActivity {
                 colorDataMatrix[x][y].set(bestMatchIndex, changeValues);
 
                 //Change Pixel to assignment
-                //bmp.setPixel(x,y,topColors.get(bestMatchIndex));
+                bmp.setPixel(x, y, topColors.get(bestMatchIndex));
             }
         }
 
@@ -387,20 +432,61 @@ public class LogoMotionActivity extends AppCompatActivity {
             topColorX.setVisibility(View.GONE);
         }
 
+
         //Primitive method for changing colors of image
         ArrayList<Integer> newColors = new ArrayList<>();
-        newColors.add(0x0000FF);
-        newColors.add(0x000000);
-        newColors.add(0x00FF00);
+        newColors.add(Color.WHITE);
+        newColors.add(Color.RED);
+        newColors.add(Color.BLUE);
+        newColors.add(Color.BLACK);
+        newColors.add(Color.GREEN);
 
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                bmp.setPixel(x, y, newColors.get(colorDataMatrix[x][y].getTopColorId()));
+        if (MANIPULATE_TYPE_CHECKBOX.isChecked()) {
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    bmp.setPixel(x, y, newColors.get(colorDataMatrix[x][y].getTopColorId()));
+                }
             }
+        }
+
+
+        //Add newColors to Main Screen
+        int newColor;
+        for (int i = 0; i < k; i++) {
+            ImageView newColorX = (ImageView) NEW_COLORS_LAYOUT.getChildAt(i);
+            newColor = newColors.get(i);
+            newColorX.setBackgroundColor(Color.rgb((newColor >> 16) & 0xff, (newColor >> 8) & 0xff, newColor & 0xff));
+            newColorX.setVisibility(View.VISIBLE);
+        }
+        for (int i = k; i < NEW_COLORS_LAYOUT.getChildCount(); i++) {
+            ImageView newColorX = (ImageView) NEW_COLORS_LAYOUT.getChildAt(i);
+            newColorX.setVisibility(View.GONE);
         }
 
         return bmp;
     }
 
+    private void constructEmotionSpinner(){
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.emotions_array, android.R.layout.simple_spinner_item);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        emotionSpinner.setAdapter(adapter);
+    }
 
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        // On selecting a spinner item
+        String item = parent.getItemAtPosition(position).toString();
+
+        // Showing selected spinner item
+        Toast.makeText(parent.getContext(), "Selected: " + item, Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onNothingSelected(AdapterView<?> adapterView) {
+
+    }
 }
