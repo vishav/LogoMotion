@@ -8,14 +8,26 @@
     <string name="camera_icon">Camera Icon</string>
     <string name="logo_motion_image_name">logomotion</string>
     <string name="logo_motion_image_extension">jpg</string>
+
+    <string name="BACKGROUND">BACKGRD</string>
+
     <string-array name="emotions_array">
-        <item>Happiness</item>
-        <item>Sad</item>
+        <item>Creative</item>
+        <item>Attention</item>
         <item>Aggressive</item>
+        <item>Love</item>
+        <item>Impressive</item>
+        <item>Intelligence</item>
         <item>Growth</item>
-        <item>Royal</item>
-        <item>Appetite</item>
-        <item>Pure</item>
-        <item>Growth</item>
+        <item>Innocence</item>
+        <item>Professional</item>
+        <item>Cheerfulness</item>
     </string-array>
+    <string-array name="palette_options">
+        <item>Monochromatic</item>
+        <item>Complementary</item>
+        <item>Triad</item>
+        <item>Analogous</item>
+    </string-array>
+
 </resources>

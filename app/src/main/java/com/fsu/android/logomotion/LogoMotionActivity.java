@@ -9,6 +9,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
@@ -24,6 +25,8 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
@@ -39,8 +42,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
+import com.fsu.android.logomotion.HSLColor;
 
-public class LogoMotionActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
+
+public class LogoMotionActivity extends AppCompatActivity implements View.OnClickListener {
 
     private int REQUEST_CAMERA = 0;
     private int SELECT_FILE = 1;
@@ -59,6 +64,8 @@ public class LogoMotionActivity extends AppCompatActivity implements AdapterView
     private Button RUN_AGAIN_BUTTON;
     private Boolean IVIMAGE_HAS_BITMAP;
     private Spinner emotionSpinner;
+    private Spinner paletteSpinner;
+    private ArrayList<Integer> NEW_COLORS;
 
     static {
         System.loadLibrary("opencv_java3");
@@ -79,11 +86,27 @@ public class LogoMotionActivity extends AppCompatActivity implements AdapterView
         MANIPULATE_TYPE_CHECKBOX = (CheckBox) findViewById(R.id.manipulateTypeCheckBox);
         IVIMAGE_HAS_BITMAP = false;
 
+        //Prepare topColor buttons
+        Button topColor1 = (Button) findViewById(R.id.topColor1);
+        topColor1.setOnClickListener(this);
+        Button topColor2 = (Button) findViewById(R.id.topColor2);
+        topColor2.setOnClickListener(this);
+        Button topColor3 = (Button) findViewById(R.id.topColor3);
+        topColor3.setOnClickListener(this);
+        Button topColor4 = (Button) findViewById(R.id.topColor4);
+        topColor4.setOnClickListener(this);
+        Button topColor5 = (Button) findViewById(R.id.topColor5);
+        topColor5.setOnClickListener(this);
+
         K_COLOR_PICKER = (NumberPicker) findViewById(R.id.kColorPicker);
         K_COLOR_PICKER.setMinValue(2);
         K_COLOR_PICKER.setMaxValue(5);
         K_COLOR_PICKER.setWrapSelectorWheel(false);
         K_COLOR_PICKER.setValue(3);
+
+        NEW_COLORS = new ArrayList<>();
+        //Default values are necessary; don't delete this row
+        NEW_COLORS.add(0); NEW_COLORS.add(0); NEW_COLORS.add(0); NEW_COLORS.add(0); NEW_COLORS.add(0);
 
         TOP_COLORS_LAYOUT = (LinearLayout) findViewById(R.id.topColorsLayout);
         NEW_COLORS_LAYOUT = (LinearLayout) findViewById(R.id.newColorsLayout);
@@ -92,10 +115,39 @@ public class LogoMotionActivity extends AppCompatActivity implements AdapterView
         ivImage2 = (ImageView) findViewById(R.id.ivImage2);
 
         emotionSpinner = (Spinner) findViewById(R.id.emotion_spinner);
-
         constructEmotionSpinner();
+        emotionSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+             @Override
+             public void onItemSelected(AdapterView<?> parent, View view, int position, long l) {
+                 String emotion = parent.getItemAtPosition(position).toString();
+                 Integer emotion_color = getResources().getColor(Utility.getColorFromEmotions(emotion.toLowerCase())) & 0xFFFFFF;
+                 String palette_type = paletteSpinner.getSelectedItem().toString();
 
-        emotionSpinner.setOnItemSelectedListener(this);
+                 ArrayList<Integer> newColors = getNewColors(emotion, palette_type);
+                 updateNewColorsInView(newColors, emotion_color);
+             }
+
+             @Override
+             public void onNothingSelected(AdapterView<?> adapterView) { }
+         });
+
+
+        paletteSpinner = (Spinner) findViewById(R.id.palette_spinner);
+        constructPaletteSpiner();
+        paletteSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long l) {
+                String palette_type = parent.getItemAtPosition(position).toString();
+                String emotion = emotionSpinner.getSelectedItem().toString();
+                Integer emotion_color = getResources().getColor(Utility.getColorFromEmotions(emotion.toLowerCase())) & 0xFFFFFF;
+
+                ArrayList<Integer> newColors = getNewColors(emotion, palette_type);
+                updateNewColorsInView(newColors, emotion_color);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) { }
+        });
 
         imageBtnSelect.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -110,7 +162,6 @@ public class LogoMotionActivity extends AppCompatActivity implements AdapterView
                     Bitmap bmp = ((BitmapDrawable) ivImage.getDrawable()).getBitmap();
                     bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
                     bmp = manipulateBitmap(bmp, K_COLOR_PICKER.getValue());
-
                     ivImage2.setImageBitmap(bmp);
                 } else {
                     AlertDialog alertDialog = new AlertDialog.Builder(LogoMotionActivity.this).create();
@@ -202,6 +253,7 @@ public class LogoMotionActivity extends AppCompatActivity implements AdapterView
     private void onSelectImageFromGallery(Intent data) {
         Bitmap bm = null;
         if (data != null) {
+            /*
             // First decode with inJustDecodeBounds=true to check dimensions
             final BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
@@ -212,14 +264,15 @@ public class LogoMotionActivity extends AppCompatActivity implements AdapterView
             String imagePath = Utility.getImagePath(LogoMotionActivity.this, pickedImage);
             BitmapFactory.decodeFile(imagePath, options);
 
-           /* even if theimage width and height are small
-            manipulateBitmap() is taking a lot of time*/
+
+           // even if theimage width and height are small
+           //  manipulateBitmap() is taking a lot of time
             int reqWidth = 100;
             int reqHeight = 100;
-            /* calculate inSamplesize
-                Multiplying the inSampleSize by 4 to reduce
-                the time taken by manipulatebitmap()
-            */
+            // calculate inSamplesize
+            //    Multiplying the inSampleSize by 4 to reduce
+            //    the time taken by manipulatebitmap()
+
             options.inSampleSize = 4 * Utility.calculateInSampleSize(options, ivImage.getWidth(), ivImage.getHeight());
 
             // resize options
@@ -231,17 +284,27 @@ public class LogoMotionActivity extends AppCompatActivity implements AdapterView
             }
             // Decode bitmap with inSampleSize set
             options.inJustDecodeBounds = false;
-
             bm = BitmapFactory.decodeFile(imagePath, options);
             ivImage.setImageBitmap(bm);
             IVIMAGE_HAS_BITMAP = true;
             String shape = Utility.findShape(this, bm);
             Log.d("image shape:", String.valueOf(shape));
-
             bm = manipulateBitmap(bm, K_COLOR_PICKER.getValue());
-
             ivImage2.setImageBitmap(bm);
+            */
+            try {
+                bm = MediaStore.Images.Media.getBitmap(getApplicationContext().getContentResolver(), data.getData());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+        ivImage.setImageBitmap(bm);
+        IVIMAGE_HAS_BITMAP = true;
+        bm = bm.copy(Bitmap.Config.ARGB_8888, true);
+        String shape = Utility.findShape(this, bm);
+        Log.d("image shape:", String.valueOf(shape));
+        bm = manipulateBitmap(bm,K_COLOR_PICKER.getValue());
+        ivImage2.setImageBitmap(bm);
     }
 
 
@@ -422,29 +485,21 @@ public class LogoMotionActivity extends AppCompatActivity implements AdapterView
         //Add topColors to Main Screen
         int topColor;
         for (int i = 0; i < k; i++) {
-            ImageView topColorX = (ImageView) TOP_COLORS_LAYOUT.getChildAt(i);
+            Button topColorX = (Button) TOP_COLORS_LAYOUT.getChildAt(i);
             topColor = topColors.get(i);
             topColorX.setBackgroundColor(Color.rgb((topColor >> 16) & 0xff, (topColor >> 8) & 0xff, topColor & 0xff));
             topColorX.setVisibility(View.VISIBLE);
         }
         for (int i = k; i < TOP_COLORS_LAYOUT.getChildCount(); i++) {
-            ImageView topColorX = (ImageView) TOP_COLORS_LAYOUT.getChildAt(i);
+            Button topColorX = (Button) TOP_COLORS_LAYOUT.getChildAt(i);
             topColorX.setVisibility(View.GONE);
         }
 
-
-        //Primitive method for changing colors of image
-        ArrayList<Integer> newColors = new ArrayList<>();
-        newColors.add(Color.WHITE);
-        newColors.add(Color.RED);
-        newColors.add(Color.BLUE);
-        newColors.add(Color.BLACK);
-        newColors.add(Color.GREEN);
-
+        //Only change colors if Checkbox is selected
         if (MANIPULATE_TYPE_CHECKBOX.isChecked()) {
             for (int x = 0; x < width; x++) {
                 for (int y = 0; y < height; y++) {
-                    bmp.setPixel(x, y, newColors.get(colorDataMatrix[x][y].getTopColorId()));
+                    bmp.setPixel(x, y, NEW_COLORS.get(colorDataMatrix[x][y].getTopColorId()));
                 }
             }
         }
@@ -454,7 +509,7 @@ public class LogoMotionActivity extends AppCompatActivity implements AdapterView
         int newColor;
         for (int i = 0; i < k; i++) {
             ImageView newColorX = (ImageView) NEW_COLORS_LAYOUT.getChildAt(i);
-            newColor = newColors.get(i);
+            newColor = NEW_COLORS.get(i);
             newColorX.setBackgroundColor(Color.rgb((newColor >> 16) & 0xff, (newColor >> 8) & 0xff, newColor & 0xff));
             newColorX.setVisibility(View.VISIBLE);
         }
@@ -476,17 +531,77 @@ public class LogoMotionActivity extends AppCompatActivity implements AdapterView
         emotionSpinner.setAdapter(adapter);
     }
 
-    @Override
-    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-        // On selecting a spinner item
-        String item = parent.getItemAtPosition(position).toString();
+    private void constructPaletteSpiner(){
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.palette_options, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        paletteSpinner.setAdapter(adapter);
+    }
 
-        // Showing selected spinner item
-        Toast.makeText(parent.getContext(), "Selected: " + item, Toast.LENGTH_LONG).show();
+    private ArrayList<Integer> getNewColors(String emotion, String palette){
+        ArrayList<Integer> newColors = new ArrayList<>();
+        Integer emotion_color = getResources().getColor(Utility.getColorFromEmotions(emotion.toLowerCase())) & 0xFFFFFF;
+
+        if (palette.equals("Monochromatic")) {
+            newColors = Utility.getMonochromaticColors(emotion_color, K_COLOR_PICKER.getValue());
+        }
+
+        return newColors;
+    }
+
+    private void updateNewColorsInView(ArrayList<Integer> newColors, int baseColor){
+        //Set global NEW_COLORS array
+        NEW_COLORS.remove(0);
+        NEW_COLORS.add(0,baseColor);
+        for(int i = 1; i <= newColors.size(); i++){
+            NEW_COLORS.remove(i);
+            NEW_COLORS.add(i,newColors.get(i-1));
+        }
+        for(int i = newColors.size()+1; i < 5; i++){
+            NEW_COLORS.remove(i);
+            NEW_COLORS.add(i,0);
+        }
+
+        //Set colors in view
+        int newColor;
+        int k = K_COLOR_PICKER.getValue();
+        for (int i = 0; i < k; i++) {
+            ImageView newColorX = (ImageView) NEW_COLORS_LAYOUT.getChildAt(i);
+            newColor = NEW_COLORS.get(i);
+            newColorX.setBackgroundColor(Color.rgb((newColor >> 16) & 0xff, (newColor >> 8) & 0xff, newColor & 0xff));
+            newColorX.setVisibility(View.VISIBLE);
+        }
+        for (int i = k; i < NEW_COLORS_LAYOUT.getChildCount(); i++) {
+            ImageView newColorX = (ImageView) NEW_COLORS_LAYOUT.getChildAt(i);
+            newColorX.setVisibility(View.GONE);
+        }
     }
 
     @Override
-    public void onNothingSelected(AdapterView<?> adapterView) {
+    public void onClick(View v){
+        Button b = (Button) findViewById(v.getId());
+        b.setTextColor(Color.BLACK);
+        if( ((ColorDrawable)b.getBackground()).getColor() == Color.BLACK){
+            b.setTextColor(Color.WHITE);
+        }
 
+        if(b.getText().equals("BACKGRD")){
+            b.setText("");
+        } else{
+            b.setText(R.string.BACKGROUND);
+        }
     }
+
+/*
+        HSLColor hslColor = new HSLColor(Color.valueOf(item_color));
+        Color complement = hslColor.getComplementary();
+
+        int comp_argb = complement.toArgb() & 0xffffff;
+        int[] comp_rgb = {(comp_argb >> 16) & 0xff, (comp_argb >> 8) & 0xff, comp_argb & 0xff };
+        NEW_COLORS.remove(1);
+        NEW_COLORS.add(1,complement.toArgb() & 0xffffff);
+        NEW_COLORS_LAYOUT.getChildAt(1).setBackgroundColor(Color.rgb(comp_rgb[0],comp_rgb[1],comp_rgb[2]));
+
+
+    */
 }

@@ -9,6 +9,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
@@ -26,10 +27,14 @@ import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static java.lang.Math.min;
+import static java.lang.StrictMath.max;
 
 /**
  * Created by vishav on 3/24/2018.
@@ -38,7 +43,7 @@ import java.util.Map;
 public class Utility {
     public static final int MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 123;
 
-    private static final Map<String, String> emotionColorMap = initializeEmotionColorMap();
+    private static final Map<String, Integer> emotionColorMap = initializeEmotionColorMap();
 
     //    @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
     protected static boolean checkPermission(final Context context) {
@@ -164,38 +169,69 @@ public class Utility {
         return shape;
     }
 
-    private static Map<String, String> initializeEmotionColorMap()
+    private static Map<String, Integer> initializeEmotionColorMap()
     {
-        Map<String,String> emotionColorMap = new HashMap<String,String>();
-        emotionColorMap.put("attention", "Orange");
-        emotionColorMap.put("creative", "Orange");
-        emotionColorMap.put("enthusiastic", "Orange");
-        emotionColorMap.put("urgent", "Red");
-        emotionColorMap.put("exciting", "Red");
-        emotionColorMap.put("aggressive", "Red");
-        emotionColorMap.put("appetite", "Red");
-        emotionColorMap.put("love", "Red");
-        emotionColorMap.put("impressive", "Purple");
-        emotionColorMap.put("wisdom", "Purple");
-        emotionColorMap.put("royal", "Purple");
-        emotionColorMap.put("calm", "Blue");
-        emotionColorMap.put("intelligence", "Blue");
-        emotionColorMap.put("confidence", "Blue");
-        emotionColorMap.put("growth", "Green");
-        emotionColorMap.put("peaceful", "Green");
-        emotionColorMap.put("innocence", "White");
-        emotionColorMap.put("pure", "White");
-        emotionColorMap.put("professional", "Black");
-        emotionColorMap.put("power", "Black");
-        emotionColorMap.put("cheerfulness", "Yellow");
-        emotionColorMap.put("optimism", "Yellow");
+        Map<String,Integer> emotionColorMap = new HashMap<>();
+        emotionColorMap.put("attention", R.color.ORANGE);
+        emotionColorMap.put("creative", R.color.ORANGE);
+        emotionColorMap.put("enthusiastic", R.color.ORANGE);
+
+        emotionColorMap.put("urgent", R.color.RED);
+        emotionColorMap.put("exciting", R.color.RED);
+        emotionColorMap.put("aggressive", R.color.RED);
+        emotionColorMap.put("appetite", R.color.RED);
+        emotionColorMap.put("love", R.color.RED);
+
+        emotionColorMap.put("impressive", R.color.PURPLE);
+        emotionColorMap.put("wisdom", R.color.PURPLE);
+        emotionColorMap.put("royal", R.color.PURPLE);
+
+        emotionColorMap.put("calm", R.color.BLUE);
+        emotionColorMap.put("intelligence", R.color.BLUE);
+        emotionColorMap.put("confidence", R.color.BLUE);
+
+        emotionColorMap.put("growth", R.color.GREEN);
+        emotionColorMap.put("peaceful", R.color.GREEN);
+
+        emotionColorMap.put("innocence", R.color.WHITE);
+        emotionColorMap.put("pure", R.color.WHITE);
+
+        emotionColorMap.put("professional", R.color.BLACK);
+        emotionColorMap.put("power", R.color.BLACK);
+
+        emotionColorMap.put("cheerfulness", R.color.YELLOW);
+        emotionColorMap.put("optimism", R.color.YELLOW);
 
 
         return emotionColorMap;
     }
 
 
-    protected static String getColorFromEmotions(String emotion){
+    protected static Integer getColorFromEmotions(String emotion){
         return emotionColorMap.get(emotion);
     }
+
+    protected static int getIntFromColor(Color c){
+        int argb = c.toArgb() & 0xffffff;
+        int[] rgb = {(argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff };
+        return Color.rgb(rgb[0],rgb[1],rgb[2]);
+    }
+
+    protected static ArrayList<Integer> getMonochromaticColors(int base, int count){
+        ArrayList<Integer> colors = new ArrayList<>();
+        HSLColor hslBase = new HSLColor(Color.valueOf(base));
+
+        Color color1 = hslBase.adjustShade(15); //15% darker
+        Color color2 = hslBase.adjustTone(15); //15% lighter
+        Color color3 = hslBase.adjustShade(25);
+        Color color4 = hslBase.adjustTone(25);
+
+        if(count >= 1){ colors.add(getIntFromColor(color1)); }
+        if(count >= 2){ colors.add(getIntFromColor(color2)); }
+        if(count >= 3){ colors.add(getIntFromColor(color3)); }
+        if(count >= 4){ colors.add(getIntFromColor(color4)); }
+
+        return colors;
+    }
+
 }
