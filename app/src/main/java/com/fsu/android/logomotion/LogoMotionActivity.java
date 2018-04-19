@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Bundle;
@@ -66,6 +67,9 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
     private Spinner emotionSpinner;
     private Spinner paletteSpinner;
     private ArrayList<Integer> NEW_COLORS;
+    private Boolean BACKGROUND_CHOSEN;
+    private Button CLEAR_ALL_BUTTON;
+
 
     static {
         System.loadLibrary("opencv_java3");
@@ -77,6 +81,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         setContentView(R.layout.activity_logo_motion);
         imageBtnSelect = (Button) findViewById(R.id.imageBtnSelect);
         RUN_AGAIN_BUTTON = (Button) findViewById(R.id.runAgainButton);
+        CLEAR_ALL_BUTTON = (Button) findViewById(R.id.clearAllButton);
         TAKE_PHOTO = getString(R.string.take_photo);
         CHOOSE_FROM_GALLERY = getString(R.string.choose_from_gallery);
         CANCEL = getString(R.string.cancel);
@@ -85,6 +90,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
 
         MANIPULATE_TYPE_CHECKBOX = (CheckBox) findViewById(R.id.manipulateTypeCheckBox);
         IVIMAGE_HAS_BITMAP = false;
+        BACKGROUND_CHOSEN = false;
 
         //Prepare topColor buttons
         Button topColor1 = (Button) findViewById(R.id.topColor1);
@@ -158,6 +164,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         RUN_AGAIN_BUTTON.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                resetTopColorsBackgroundStatus();
                 if (IVIMAGE_HAS_BITMAP) {
                     Bitmap bmp = ((BitmapDrawable) ivImage.getDrawable()).getBitmap();
                     bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
@@ -175,6 +182,22 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                             });
                     alertDialog.show();
                 }
+            }
+        });
+
+        CLEAR_ALL_BUTTON.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                resetTopColorsBackgroundStatus();
+                ivImage.setImageResource(0);
+                ivImage2.setImageResource(0);
+                MANIPULATE_TYPE_CHECKBOX.setChecked(false);
+                BACKGROUND_CHOSEN = false;
+                String emotion = emotionSpinner.getSelectedItem().toString();
+                Integer emotion_color = getResources().getColor(Utility.getColorFromEmotions(emotion.toLowerCase())) & 0xFFFFFF;
+                String palette_type = paletteSpinner.getSelectedItem().toString();
+                ArrayList<Integer> newColors = getNewColors(emotion, palette_type);
+                updateNewColorsInView(newColors, emotion_color);
             }
         });
     }
@@ -579,18 +602,95 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
 
     @Override
     public void onClick(View v){
-        Button b = (Button) findViewById(v.getId());
-        b.setTextColor(Color.BLACK);
-        if( ((ColorDrawable)b.getBackground()).getColor() == Color.BLACK){
-            b.setTextColor(Color.WHITE);
-        }
+        //Only allow 1 background color at a time
+        if(!BACKGROUND_CHOSEN) {
+            BACKGROUND_CHOSEN = true;
+            Button b = (Button) findViewById(v.getId());
+            b.setTextColor(Color.BLACK);
+            if (((ColorDrawable) b.getBackground()).getColor() == Color.BLACK) {
+                b.setTextColor(Color.WHITE);
+            }
 
-        if(b.getText().equals("BACKGRD")){
-            b.setText("");
-        } else{
-            b.setText(R.string.BACKGROUND);
+            if (!b.getText().equals("BACKGRD")) {
+                b.setText(R.string.BACKGROUND);
+                setColorAsBackground(b);
+            }
         }
     }
+
+    public void setColorAsBackground(Button b){
+        ColorDrawable bgColorDrawable = (ColorDrawable) b.getBackground();
+        int bgColor = bgColorDrawable.getColor() & 0xFFFFFF;
+        if (IVIMAGE_HAS_BITMAP) {
+            Bitmap bmp = ((BitmapDrawable) ivImage2.getDrawable()).getBitmap();
+            bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
+
+            int target_color = bgColor;
+            int child_index = -1;
+            if(MANIPULATE_TYPE_CHECKBOX.isChecked()){
+                //Based on NEW_COLORS
+                LinearLayout linearLayout = (LinearLayout) findViewById(R.id.topColorsLayout);
+                for (int i = 0; i < linearLayout.getChildCount(); i++){
+                    Button child = (Button) linearLayout.getChildAt(i);
+                    if (child.getId() == b.getId()){
+                        child_index = i;
+                        target_color = NEW_COLORS.get(i) & 0xFFFFFF;
+                        break;
+                    }
+                }
+                //Create new set of NEW_COLORS where Color.White replaces the background color
+                //  Also, all colors are shifted to the right so that more important colors
+                //  stay in the modified image
+                for(int i = NEW_COLORS.size()-1; i >= 0; i--){
+                    NEW_COLORS.remove(i);
+                    if(i != child_index){
+                        NEW_COLORS.add(i,NEW_COLORS.get(i-1));
+                    }
+                    else{
+                        NEW_COLORS.add(i,Color.WHITE);
+                        break;
+                    }
+                }
+                //Set colors in view
+                int newColor;
+                int k = K_COLOR_PICKER.getValue();
+                for (int i = 0; i < k; i++) {
+                    ImageView newColorX = (ImageView) NEW_COLORS_LAYOUT.getChildAt(i);
+                    newColor = NEW_COLORS.get(i);
+                    newColorX.setBackgroundColor(Color.rgb((newColor >> 16) & 0xff, (newColor >> 8) & 0xff, newColor & 0xff));
+                    newColorX.setVisibility(View.VISIBLE);
+                }
+                for (int i = k; i < NEW_COLORS_LAYOUT.getChildCount(); i++) {
+                    ImageView newColorX = (ImageView) NEW_COLORS_LAYOUT.getChildAt(i);
+                    newColorX.setVisibility(View.GONE);
+                }
+                manipulateBitmap(bmp,K_COLOR_PICKER.getValue());
+            }
+            else {
+                for (int x = 0; x < bmp.getWidth(); x++) {
+                    for (int y = 0; y < bmp.getHeight(); y++) {
+                        int pixel = bmp.getPixel(x, y) & 0xffffff;
+                        if (pixel == target_color) {
+                            bmp.setPixel(x, y, Color.WHITE);
+                        }
+                    }
+                }
+            }
+
+
+            ivImage2.setImageBitmap(bmp);
+        }
+    }
+
+    public void resetTopColorsBackgroundStatus(){
+        LinearLayout linearLayout = (LinearLayout) findViewById(R.id.topColorsLayout);
+        for (int i = 0; i < linearLayout.getChildCount(); i++){
+            Button child = (Button) linearLayout.getChildAt(i);
+            child.setText("");
+        }
+        BACKGROUND_CHOSEN = false;
+    }
+
 
 /*
         HSLColor hslColor = new HSLColor(Color.valueOf(item_color));
