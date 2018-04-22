@@ -372,25 +372,6 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
     }
 
 
-    public double[] colorDistance(int x, int y) {
-        //3D Cartesian Distance formula
-        int[] rgb_x = {((x >> 16) & 0xff), ((x >> 8) & 0xff), (x & 0xff)};
-        int[] rgb_y = {((y >> 16) & 0xff), ((y >> 8) & 0xff), (y & 0xff)};
-        double[] returnList = {0.0, 0.0, 0.0, 0.0};
-
-        double sum = 0.0;
-        int diff;
-        for (int i = 0; i < 3; i++) {
-            diff = rgb_y[i] - rgb_x[i];
-            returnList[i + 1] = diff;
-            sum = sum + Math.pow(diff, 2);
-
-        }
-        returnList[0] = Math.sqrt(sum);
-        return returnList;
-    }
-
-
     public int roundColor(int color) {
         int[] rgb = {((color >> 16) & 0xff), ((color >> 8) & 0xff), (color & 0xff)};
 
@@ -478,7 +459,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
 
                 for (int j = 0; j < k; j++) {
                     //distance, change1, change2, change3
-                    returnList = colorDistance(pixel, topColors.get(j));
+                    returnList = Utility.colorDistance(pixel, topColors.get(j));
                     //Get Cartesian distance between pixels
                     distance = returnList[0];
 
@@ -567,11 +548,18 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
     }
 
     private ArrayList<Integer> getNewColors(String emotion, String palette){
+        //PALETTES
         ArrayList<Integer> newColors = new ArrayList<>();
         Integer emotion_color = getResources().getColor(Utility.getColorFromEmotions(emotion.toLowerCase())) & 0xFFFFFF;
 
         if (palette.equals("Monochromatic")) {
             newColors = Utility.getMonochromaticColors(emotion_color, K_COLOR_PICKER.getValue());
+        }
+        else if (palette.equals("Complementary")) {
+            newColors = Utility.getComplementaryColorPalette(emotion_color, K_COLOR_PICKER.getValue());
+        }
+        else if (palette.equals("Analogous")) {
+            newColors = Utility.getAnalogousColorPalette(emotion_color, K_COLOR_PICKER.getValue());
         }
 
         return newColors;
@@ -715,17 +703,4 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
             ivImage2.setImageBitmap(bmp);
         }
     }
-
-/*
-        HSLColor hslColor = new HSLColor(Color.valueOf(item_color));
-        Color complement = hslColor.getComplementary();
-
-        int comp_argb = complement.toArgb() & 0xffffff;
-        int[] comp_rgb = {(comp_argb >> 16) & 0xff, (comp_argb >> 8) & 0xff, comp_argb & 0xff };
-        NEW_COLORS.remove(1);
-        NEW_COLORS.add(1,complement.toArgb() & 0xffffff);
-        NEW_COLORS_LAYOUT.getChildAt(1).setBackgroundColor(Color.rgb(comp_rgb[0],comp_rgb[1],comp_rgb[2]));
-
-
-    */
 }

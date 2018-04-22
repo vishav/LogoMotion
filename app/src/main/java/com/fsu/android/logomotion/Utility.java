@@ -234,6 +234,118 @@ public class Utility {
         return colors;
     }
 
+    protected static double[] colorDistance(int x, int y) {
+        //3D Cartesian Distance formula
+        int[] rgb_x = {((x >> 16) & 0xff), ((x >> 8) & 0xff), (x & 0xff)};
+        int[] rgb_y = {((y >> 16) & 0xff), ((y >> 8) & 0xff), (y & 0xff)};
+        double[] returnList = {0.0, 0.0, 0.0, 0.0};
+
+        double sum = 0.0;
+        int diff;
+        for (int i = 0; i < 3; i++) {
+            diff = rgb_y[i] - rgb_x[i];
+            returnList[i + 1] = diff;
+            sum = sum + Math.pow(diff, 2);
+
+        }
+        returnList[0] = Math.sqrt(sum);
+        return returnList;
+    }
+
+    private static ArrayList<Integer> getRYBColorWheel(){
+        ArrayList<Integer> colorWheel = new ArrayList<>();
+        colorWheel.add(16711680); //red
+        colorWheel.add(14893620); //vermillion
+        colorWheel.add(16753920); //orange
+        colorWheel.add(16760576); //amber
+        colorWheel.add(16776960); //yellow
+        colorWheel.add(8388352); //chartreuse
+        colorWheel.add(32768); //green
+        colorWheel.add(32896); //teal
+        colorWheel.add(255); //blue
+        colorWheel.add(15630978); //violet
+        colorWheel.add(8388736); //purple
+        colorWheel.add(16711935); //magenta
+        return colorWheel;
+    }
+
+    private static int getColorWheelIndex(int color){
+        ArrayList<Integer> colorWheel = getRYBColorWheel();
+        //Get Closest color on Color Wheel
+        double min_d = (double)Integer.MAX_VALUE;
+        int min_index = 0;
+        for(int i = 0; i < 12; i++){
+            double[] returnList = colorDistance(color,colorWheel.get(i));
+            double d = returnList[0];
+            if(d < min_d){
+                min_d = d;
+                min_index = i;
+            }
+        }
+        return min_index;
+    }
+
+
+    protected static int getComplementaryRYBColor(int color){
+        ArrayList<Integer> colorWheel = getRYBColorWheel();
+        //Return RYB complement
+        return colorWheel.get(modulo(getColorWheelIndex(color)+6,12));
+    }
+
+    private static int modulo(int x, int n){
+        int val = x%n;
+        if(val < 0) val += n;
+        return val;
+    }
+
+    protected static ArrayList<Integer> getAnalogousColorPalette(int base, int count){
+        ArrayList<Integer> colors = new ArrayList<>();
+        ArrayList<Integer> colorWheel = getRYBColorWheel();
+        int base_index = getColorWheelIndex(base);
+
+        //Color1
+        int color1 = colorWheel.get(modulo(base_index+1,12));
+        //Color2
+        int color2 = colorWheel.get(modulo(base_index-1,12));
+        //Color3
+        int color3 = colorWheel.get(modulo(base_index+2,12));
+        //Color4
+        int color4 = colorWheel.get(modulo(base_index-2,12));
+
+        if(count >= 1){ colors.add(color1); }
+        if(count >= 2){ colors.add(color2); }
+        if(count >= 3){ colors.add(color3); }
+        if(count >= 4){ colors.add(color4); }
+
+        return colors;
+    }
+
+    protected static ArrayList<Integer> getComplementaryColorPalette(int base, int count){
+        ArrayList<Integer> colors = new ArrayList<>();
+
+        HSLColor hslColor = new HSLColor(Color.valueOf(base));
+        //Color1
+        Color baseComplement = Color.valueOf(getComplementaryRYBColor(base)); //Color baseComplement = hslColor.getComplementary();
+        HSLColor hslBaseComplement = new HSLColor(baseComplement);
+        //Color2
+        float lum = hslColor.getLuminance()*.75f;
+        Color color2 = hslColor.adjustLuminance(lum);
+        //Color3
+        lum = hslColor.getLuminance()*1.25f;
+        if (lum > 100.0) lum = 100.0f;
+        Color color3 = hslColor.adjustLuminance(lum);
+        //Color4
+        lum = hslBaseComplement.getLuminance()*0.75f;
+        Color color4 = hslBaseComplement.adjustLuminance(lum);
+
+        if(count >= 1){ colors.add(getIntFromColor(baseComplement)); }
+        if(count >= 2){ colors.add(getIntFromColor(color2)); }
+        if(count >= 3){ colors.add(getIntFromColor(color3)); }
+        if(count >= 4){ colors.add(getIntFromColor(color4)); }
+
+        return colors;
+    }
+
     protected static int applyShading(int color, int rChange, int gChange, int bChange){
         int[] rgb = {(color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff };
 
@@ -254,6 +366,5 @@ public class Utility {
 
         return (rgb[0] << 16) + (rgb[1] << 8) + rgb[2];
     }
-
 
 }

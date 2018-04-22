@@ -7,29 +7,20 @@
     <!-- Max/min/mean -->
     <color name="WHITE">#FFFFFF</color>
     <color name="BLACK">#000000</color>
-    <color name="GRAY">#808080</color>
-    <color name="GREY">#808080</color>
 
-    <!-- Rainbow: ROYGBIV -->
+    <!-- Color Wheel -->
     <color name="RED">#FF0000</color>
+    <color name="VERMILLION">#e34234</color>
     <color name="ORANGE">#FFA500</color>
+    <color name="AMBER">#ffbf00</color>
     <color name="YELLOW">#FFFF00</color>
+    <color name="CHARTREUSE">#7fff00</color>
     <color name="GREEN">#008000</color>
-    <color name="BLUE">#0000FF</color>
-    <color name="INDIGO">#4B0082</color>
-    <color name="VIOLET">#EE82EE</color>
-
-    <!-- Expanded colors -->
-    <color name="SILVER">#C0C0C0</color>
-    <color name="GOLD">#FFD700</color>
-    <color name="MAROON">#800000</color>
-    <color name="OLIVE">#808000</color>
-    <color name="LIME">#00FF00</color>
-    <color name="CYAN">#00FFFF</color>
     <color name="TEAL">#008080</color>
-    <color name="NAVY">#000080</color>
+    <color name="BLUE">#0000FF</color>
+    <color name="VIOLET">#EE82EE</color>
     <color name="PURPLE">#800080</color>
-    <color name="PINK">#FFC0CB</color>
-    <color name="BROWN">#A52A2A</color>
     <color name="MAGENTA">#FF00FF</color>
+
+
 </resources>
