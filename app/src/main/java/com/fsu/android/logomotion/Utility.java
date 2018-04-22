@@ -234,4 +234,26 @@ public class Utility {
         return colors;
     }
 
+    protected static int applyShading(int color, int rChange, int gChange, int bChange){
+        int[] rgb = {(color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff };
+
+        int diff = rgb[0] - rChange;
+        if(diff <= 255 && diff >= 0){
+            rgb[0] = diff;
+        }
+
+        diff = rgb[1] - gChange;
+        if(diff <= 255 && diff >= 0){
+            rgb[1] = diff;
+        }
+
+        diff = rgb[2] - bChange;
+        if(diff <= 255 && diff >= 0){
+            rgb[2] = diff;
+        }
+
+        return (rgb[0] << 16) + (rgb[1] << 8) + rgb[2];
+    }
+
+
 }

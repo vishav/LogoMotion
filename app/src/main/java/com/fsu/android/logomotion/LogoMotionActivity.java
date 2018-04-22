@@ -62,13 +62,14 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
     private LinearLayout TOP_COLORS_LAYOUT;
     private LinearLayout NEW_COLORS_LAYOUT;
     private CheckBox MANIPULATE_TYPE_CHECKBOX;
+    private CheckBox APPLY_SHADING_CHECKBOX;
     private Button RUN_AGAIN_BUTTON;
     private Boolean IVIMAGE_HAS_BITMAP;
     private Spinner emotionSpinner;
     private Spinner paletteSpinner;
     private ArrayList<Integer> NEW_COLORS;
     private Boolean BACKGROUND_CHOSEN;
-    private Button CLEAR_ALL_BUTTON;
+    private Button RESTART_BUTTON;
 
 
     static {
@@ -81,7 +82,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         setContentView(R.layout.activity_logo_motion);
         imageBtnSelect = (Button) findViewById(R.id.imageBtnSelect);
         RUN_AGAIN_BUTTON = (Button) findViewById(R.id.runAgainButton);
-        CLEAR_ALL_BUTTON = (Button) findViewById(R.id.clearAllButton);
+        RESTART_BUTTON = (Button) findViewById(R.id.restartButton);
         TAKE_PHOTO = getString(R.string.take_photo);
         CHOOSE_FROM_GALLERY = getString(R.string.choose_from_gallery);
         CANCEL = getString(R.string.cancel);
@@ -89,6 +90,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         LOGO_MOTION_IMAGE_EXTENSION = getString(R.string.logo_motion_image_extension);
 
         MANIPULATE_TYPE_CHECKBOX = (CheckBox) findViewById(R.id.manipulateTypeCheckBox);
+        APPLY_SHADING_CHECKBOX = (CheckBox) findViewById(R.id.applyShadingCheckBox);
         IVIMAGE_HAS_BITMAP = false;
         BACKGROUND_CHOSEN = false;
 
@@ -111,8 +113,8 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         K_COLOR_PICKER.setValue(3);
 
         NEW_COLORS = new ArrayList<>();
-        //Default values are necessary; don't delete this row
-        NEW_COLORS.add(0); NEW_COLORS.add(0); NEW_COLORS.add(0); NEW_COLORS.add(0); NEW_COLORS.add(0);
+        resetNewColors();
+
 
         TOP_COLORS_LAYOUT = (LinearLayout) findViewById(R.id.topColorsLayout);
         NEW_COLORS_LAYOUT = (LinearLayout) findViewById(R.id.newColorsLayout);
@@ -185,19 +187,10 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
             }
         });
 
-        CLEAR_ALL_BUTTON.setOnClickListener(new View.OnClickListener() {
+        RESTART_BUTTON.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                resetTopColorsBackgroundStatus();
-                ivImage.setImageResource(0);
-                ivImage2.setImageResource(0);
-                MANIPULATE_TYPE_CHECKBOX.setChecked(false);
-                BACKGROUND_CHOSEN = false;
-                String emotion = emotionSpinner.getSelectedItem().toString();
-                Integer emotion_color = getResources().getColor(Utility.getColorFromEmotions(emotion.toLowerCase())) & 0xFFFFFF;
-                String palette_type = paletteSpinner.getSelectedItem().toString();
-                ArrayList<Integer> newColors = getNewColors(emotion, palette_type);
-                updateNewColorsInView(newColors, emotion_color);
+                restartAction();
             }
         });
     }
@@ -321,6 +314,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                 e.printStackTrace();
             }
         }
+        restartAction();
         ivImage.setImageBitmap(bm);
         IVIMAGE_HAS_BITMAP = true;
         bm = bm.copy(Bitmap.Config.ARGB_8888, true);
@@ -352,14 +346,13 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+        restartAction();
         bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
         ivImage.setImageBitmap(bmp);
         IVIMAGE_HAS_BITMAP = true;
         // this method returns the shape present in the image.
         String shape = Utility.findShape(this, bmp);
         Log.d("image shape:", String.valueOf(shape));
-
         bmp = manipulateBitmap(bmp, K_COLOR_PICKER.getValue());
         ivImage2.setImageBitmap(bmp);
     }
@@ -501,7 +494,13 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                 colorDataMatrix[x][y].set(bestMatchIndex, changeValues);
 
                 //Change Pixel to assignment
-                bmp.setPixel(x, y, topColors.get(bestMatchIndex));
+                if(APPLY_SHADING_CHECKBOX.isChecked() && !MANIPULATE_TYPE_CHECKBOX.isChecked()){
+                    ColorData newColorData = colorDataMatrix[x][y];
+                    int shadedColor = Utility.applyShading(pixel, newColorData.getrChange(), newColorData.getgChange(), newColorData.getbChange());
+                    bmp.setPixel(x, y, shadedColor);
+                } else {
+                    bmp.setPixel(x, y, topColors.get(bestMatchIndex));
+                }
             }
         }
 
@@ -521,8 +520,14 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         //Only change colors if Checkbox is selected
         if (MANIPULATE_TYPE_CHECKBOX.isChecked()) {
             for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++) {
-                    bmp.setPixel(x, y, NEW_COLORS.get(colorDataMatrix[x][y].getTopColorId()));
+                for (int y = 0; y < height; y++){
+                    ColorData newColorData = colorDataMatrix[x][y];
+                    int topColorId = newColorData.getTopColorId();
+                    int newColor = NEW_COLORS.get(topColorId);
+                    if(APPLY_SHADING_CHECKBOX.isChecked()) {
+                        newColor = Utility.applyShading(newColor, newColorData.getrChange(), newColorData.getgChange(), newColorData.getbChange());
+                    }
+                    bmp.setPixel(x, y,newColor);
                 }
             }
         }
@@ -618,11 +623,13 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         }
     }
 
+
     public void setColorAsBackground(Button b){
         ColorDrawable bgColorDrawable = (ColorDrawable) b.getBackground();
         int bgColor = bgColorDrawable.getColor() & 0xFFFFFF;
+
         if (IVIMAGE_HAS_BITMAP) {
-            Bitmap bmp = ((BitmapDrawable) ivImage2.getDrawable()).getBitmap();
+            Bitmap bmp = ((BitmapDrawable) ivImage.getDrawable()).getBitmap();
             bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
 
             int target_color = bgColor;
@@ -634,7 +641,6 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                     Button child = (Button) linearLayout.getChildAt(i);
                     if (child.getId() == b.getId()){
                         child_index = i;
-                        target_color = NEW_COLORS.get(i) & 0xFFFFFF;
                         break;
                     }
                 }
@@ -650,19 +656,6 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                         NEW_COLORS.add(i,Color.WHITE);
                         break;
                     }
-                }
-                //Set colors in view
-                int newColor;
-                int k = K_COLOR_PICKER.getValue();
-                for (int i = 0; i < k; i++) {
-                    ImageView newColorX = (ImageView) NEW_COLORS_LAYOUT.getChildAt(i);
-                    newColor = NEW_COLORS.get(i);
-                    newColorX.setBackgroundColor(Color.rgb((newColor >> 16) & 0xff, (newColor >> 8) & 0xff, newColor & 0xff));
-                    newColorX.setVisibility(View.VISIBLE);
-                }
-                for (int i = k; i < NEW_COLORS_LAYOUT.getChildCount(); i++) {
-                    ImageView newColorX = (ImageView) NEW_COLORS_LAYOUT.getChildAt(i);
-                    newColorX.setVisibility(View.GONE);
                 }
                 manipulateBitmap(bmp,K_COLOR_PICKER.getValue());
             }
@@ -689,8 +682,39 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
             child.setText("");
         }
         BACKGROUND_CHOSEN = false;
+
+        //Since background status has been cleared, the NEW_COLORS need to be fixed
+        //   The colors were shifted to the right at some point and the last color was lost.
+        String emotion = emotionSpinner.getSelectedItem().toString();
+        Integer emotion_color = getResources().getColor(Utility.getColorFromEmotions(emotion.toLowerCase())) & 0xFFFFFF;
+        String palette_type = paletteSpinner.getSelectedItem().toString();
+        ArrayList<Integer> newColors = getNewColors(emotion, palette_type);
+        updateNewColorsInView(newColors, emotion_color);
+
     }
 
+    public void resetNewColors(){
+        NEW_COLORS.clear();
+        NEW_COLORS.add(0); NEW_COLORS.add(0); NEW_COLORS.add(0); NEW_COLORS.add(0); NEW_COLORS.add(0);
+    }
+
+    public void restartAction(){
+        resetTopColorsBackgroundStatus();
+        MANIPULATE_TYPE_CHECKBOX.setChecked(false);
+        APPLY_SHADING_CHECKBOX.setChecked(false);
+        BACKGROUND_CHOSEN = false;
+
+        //Resets "BACKGD" on Top Colors and NEW_COLORS
+        resetTopColorsBackgroundStatus();
+
+        if(IVIMAGE_HAS_BITMAP) {
+            //Re-do manipulateBitmap
+            Bitmap bmp = ((BitmapDrawable) ivImage.getDrawable()).getBitmap();
+            bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
+            bmp = manipulateBitmap(bmp, K_COLOR_PICKER.getValue());
+            ivImage2.setImageBitmap(bmp);
+        }
+    }
 
 /*
         HSLColor hslColor = new HSLColor(Color.valueOf(item_color));

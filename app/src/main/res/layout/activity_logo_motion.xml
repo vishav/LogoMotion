@@ -207,7 +207,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:weightSum="3">
+                android:weightSum="2">
 
                 <CheckBox
                     android:id="@+id/manipulateTypeCheckBox"
@@ -217,12 +217,28 @@
                     android:checked="false"
                     android:text="Use new colors?" />
 
-                <Button
-                    android:id="@+id/clearAllButton"
+                <CheckBox
+                    android:id="@+id/applyShadingCheckBox"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="Clear All" />
+                    android:checked="false"
+                    android:text="Apply shading?" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="2">
+
+                <Button
+                    android:id="@+id/restartButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="Restart" />
 
                 <Button
                     android:id="@+id/runAgainButton"
@@ -232,7 +248,9 @@
                     android:text="Run Again" />
 
             </LinearLayout>
+
         </LinearLayout>
+
     </ScrollView>
 
 </LinearLayout>

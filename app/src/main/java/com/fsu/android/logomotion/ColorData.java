@@ -58,4 +58,11 @@ public class ColorData {
     public void setbChange(int bChange) {
         this.bChange = bChange;
     }
+
+    public void setChangesWithPixels(int pixel, int assignment){
+
+        this.rChange = ((pixel >> 16) & 0xff) - ((assignment >> 16) & 0xff);
+        this.gChange = ((pixel >> 8) & 0xff) - ((assignment >> 8) & 0xff);
+        this.rChange = (pixel & 0xff) - (assignment & 0xff);
+    }
 }
