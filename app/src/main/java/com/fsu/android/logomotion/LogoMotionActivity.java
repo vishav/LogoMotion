@@ -561,6 +561,10 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         else if (palette.equals("Analogous")) {
             newColors = Utility.getAnalogousColorPalette(emotion_color, K_COLOR_PICKER.getValue());
         }
+        else if(palette.equals("Triad")){
+            newColors = Utility.getTriadColorPalette(emotion_color, K_COLOR_PICKER.getValue());
+        }
+
 
         return newColors;
     }

@@ -320,6 +320,24 @@ public class Utility {
         return colors;
     }
 
+    protected static ArrayList<Integer> getTriadColorPalette(int base, int count){
+        ArrayList<Integer> colors = new ArrayList<>();
+        ArrayList<Integer> colorWheel = getRYBColorWheel();
+        int base_index = getColorWheelIndex(base);
+
+        //Color1
+        int color1 = colorWheel.get(modulo(base_index+4,12));
+        //Color2
+        int color2 = colorWheel.get(modulo(base_index-4,12));
+
+        if(count >= 1){ colors.add(color1); }
+        if(count >= 2){ colors.add(color2); }
+        if(count >= 3){ colors.add(Color.BLACK); }
+        if(count >= 4){ colors.add(Color.BLACK); }
+
+        return colors;
+    }
+
     protected static ArrayList<Integer> getComplementaryColorPalette(int base, int count){
         ArrayList<Integer> colors = new ArrayList<>();
 
