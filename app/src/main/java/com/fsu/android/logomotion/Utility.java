@@ -20,10 +20,12 @@ import android.util.Log;
 import android.widget.ImageView;
 
 import org.opencv.android.Utils;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.Point;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
@@ -132,28 +134,43 @@ public class Utility {
         double shapeSize=0;
         Imgproc.cvtColor(edges, edges, Imgproc.COLOR_RGB2GRAY, 0);
         Imgproc.GaussianBlur(edges, edges, new Size(3, 3), 0);
-        Imgproc.threshold(edges, edges, 60, 255, Imgproc.THRESH_BINARY);
+        Imgproc.threshold(edges, edges, 128, 255, Imgproc.THRESH_BINARY);
+        Imgproc.Canny(edges,edges,0,255);
+        Imgproc.dilate(edges, edges, new Mat(), new Point(-1, 1), 1);
         Imgproc.findContours(edges, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
 
+        List<MatOfPoint> cntList = new ArrayList<>();
         for (int i=0; i<contours.size();i++) {
             MatOfPoint2f approxCurve2f = new MatOfPoint2f();
             MatOfPoint2f cnt2f = new MatOfPoint2f();
             MatOfPoint approxContour = new MatOfPoint();
             MatOfPoint cnt=contours.get(i);
             cnt.convertTo(cnt2f, CvType.CV_32FC2);
-            double epsilon = 0.1 * Imgproc.arcLength(cnt2f, true);
+            double epsilon = 0.02 * Imgproc.arcLength(cnt2f, true);
             Imgproc.approxPolyDP(cnt2f, approxCurve2f, epsilon, true);
             approxCurve2f.convertTo(approxContour, CvType.CV_32S);
             double area = Math.abs(Imgproc.contourArea(cnt));
-            double size = approxContour.size().height;
+            double size = approxContour.total();
+            if(Math.abs(area)<100 || !Imgproc.isContourConvex(approxContour) || size<3 ){
+                continue;
+            }else{
+                cntList.add(approxContour);
+            }
+//            Log.d("final contour size", String.valueOf(size));
+        }
+
+        for(int i=0; i<cntList.size();i++){
+            MatOfPoint cnt=cntList.get(i);
+            double area = Math.abs(Imgproc.contourArea(cnt));
+            double size = cnt.total();
             Log.d("image area", String.valueOf(area));
             Log.d("contour size", String.valueOf(size));
-            Log.d("shape factor", String.valueOf(epsilon*epsilon/(.04*area*4*3.14)));
-            if(area>maxArea && i!=0){
+//            Log.d("isconvex", String.valueOf(Imgproc.isContourConvex(approxContour)));
+//            Log.d("shape factor", String.valueOf(epsilon*epsilon/(.04*area*4*3.14)));
+            if(area>maxArea && (i!=0 || cntList.size()==1)){
                 maxArea=area;
                 shapeSize=size;
             }
-            Log.d("final contour size", String.valueOf(size));
         }
 
         if(shapeSize == 3){
@@ -162,7 +179,7 @@ public class Utility {
             shape= "square";
         }else if(shapeSize == 5){
             shape= "pentagon";
-        }else{
+        }else if(shapeSize>=8){
             shape= "circle";
         }
         Log.d("final shape size", String.valueOf(shapeSize));
