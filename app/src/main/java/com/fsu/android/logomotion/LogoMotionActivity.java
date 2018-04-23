@@ -70,6 +70,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
     private ArrayList<Integer> NEW_COLORS;
     private Boolean BACKGROUND_CHOSEN;
     private Button RESTART_BUTTON;
+    private CheckBox SHIFT_NEW_COLORS_CHECKBOX;
 
 
     static {
@@ -91,6 +92,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
 
         MANIPULATE_TYPE_CHECKBOX = (CheckBox) findViewById(R.id.manipulateTypeCheckBox);
         APPLY_SHADING_CHECKBOX = (CheckBox) findViewById(R.id.applyShadingCheckBox);
+        SHIFT_NEW_COLORS_CHECKBOX = (CheckBox) findViewById(R.id.shiftNewColorsCheckBox);
         IVIMAGE_HAS_BITMAP = false;
         BACKGROUND_CHOSEN = false;
 
@@ -475,13 +477,13 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                 colorDataMatrix[x][y].set(bestMatchIndex, changeValues);
 
                 //Change Pixel to assignment
-                if(APPLY_SHADING_CHECKBOX.isChecked() && !MANIPULATE_TYPE_CHECKBOX.isChecked()){
+                /*if(APPLY_SHADING_CHECKBOX.isChecked() && !MANIPULATE_TYPE_CHECKBOX.isChecked()){
                     ColorData newColorData = colorDataMatrix[x][y];
                     int shadedColor = Utility.applyShading(pixel, newColorData.getrChange(), newColorData.getgChange(), newColorData.getbChange());
                     bmp.setPixel(x, y, shadedColor);
-                } else {
+                } else {*/
                     bmp.setPixel(x, y, topColors.get(bestMatchIndex));
-                }
+                //}
             }
         }
 
@@ -565,7 +567,6 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
             newColors = Utility.getTriadColorPalette(emotion_color, K_COLOR_PICKER.getValue());
         }
 
-
         return newColors;
     }
 
@@ -639,15 +640,20 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                 //Create new set of NEW_COLORS where Color.White replaces the background color
                 //  Also, all colors are shifted to the right so that more important colors
                 //  stay in the modified image
-                for(int i = NEW_COLORS.size()-1; i >= 0; i--){
-                    NEW_COLORS.remove(i);
-                    if(i != child_index){
-                        NEW_COLORS.add(i,NEW_COLORS.get(i-1));
+                if(SHIFT_NEW_COLORS_CHECKBOX.isChecked()) {
+                    for (int i = NEW_COLORS.size() - 1; i >= 0; i--) {
+                        NEW_COLORS.remove(i);
+                        if (i != child_index) {
+                            NEW_COLORS.add(i, NEW_COLORS.get(i - 1));
+                        } else {
+                            NEW_COLORS.add(i, Color.WHITE);
+                            break;
+                        }
                     }
-                    else{
-                        NEW_COLORS.add(i,Color.WHITE);
-                        break;
-                    }
+                }
+                else{
+                    NEW_COLORS.remove(child_index);
+                    NEW_COLORS.add(child_index, Color.WHITE);
                 }
                 manipulateBitmap(bmp,K_COLOR_PICKER.getValue());
             }
@@ -695,9 +701,6 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         MANIPULATE_TYPE_CHECKBOX.setChecked(false);
         APPLY_SHADING_CHECKBOX.setChecked(false);
         BACKGROUND_CHOSEN = false;
-
-        //Resets "BACKGD" on Top Colors and NEW_COLORS
-        resetTopColorsBackgroundStatus();
 
         if(IVIMAGE_HAS_BITMAP) {
             //Re-do manipulateBitmap
