@@ -74,6 +74,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
     private ArrayList<Integer> NEW_COLORS;
     private Boolean BACKGROUND_CHOSEN;
     private Button RESTART_BUTTON;
+    private Button SAVE_BUTTON;
     private CheckBox SHIFT_NEW_COLORS_CHECKBOX;
     private LinearLayout SLIDER_LAYOUT;
     private Boolean SLIDERS_ADJUSTED;
@@ -93,6 +94,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         imageBtnSelect = (Button) findViewById(R.id.imageBtnSelect);
         RUN_AGAIN_BUTTON = (Button) findViewById(R.id.runAgainButton);
         RESTART_BUTTON = (Button) findViewById(R.id.restartButton);
+        SAVE_BUTTON = (Button) findViewById(R.id.saveButton);
         TAKE_PHOTO = getString(R.string.take_photo);
         CHOOSE_FROM_GALLERY = getString(R.string.choose_from_gallery);
         CANCEL = getString(R.string.cancel);
@@ -132,7 +134,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         TOP_COLORS_LAYOUT = (LinearLayout) findViewById(R.id.topColorsLayout);
         NEW_COLORS_LAYOUT = (LinearLayout) findViewById(R.id.newColorsLayout);
         SLIDER_LAYOUT = (LinearLayout) findViewById(R.id.sliderLayout);
-        for(int i = 0; i < SLIDER_LAYOUT.getChildCount(); i++){
+        for (int i = 0; i < SLIDER_LAYOUT.getChildCount(); i++) {
             SeekBar sb = (SeekBar) SLIDER_LAYOUT.getChildAt(i);
             sb.setOnSeekBarChangeListener(this);
         }
@@ -144,20 +146,21 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         constructEmotionSpinner();
 
         emotionSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-             @Override
-             public void onItemSelected(AdapterView<?> parent, View view, int position, long l) {
-                 resetTopColorsBackgroundStatus();
-                 String emotion = parent.getItemAtPosition(position).toString();
-                 Integer emotion_color = getResources().getColor(Utility.getColorFromEmotions(emotion.toLowerCase())) & 0xFFFFFF;
-                 String palette_type = paletteSpinner.getSelectedItem().toString();
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long l) {
+                resetTopColorsBackgroundStatus();
+                String emotion = parent.getItemAtPosition(position).toString();
+                Integer emotion_color = getResources().getColor(Utility.getColorFromEmotions(emotion.toLowerCase())) & 0xFFFFFF;
+                String palette_type = paletteSpinner.getSelectedItem().toString();
 
-                 ArrayList<Integer> newColors = getNewColors(emotion, palette_type);
-                 updateNewColorsInView(newColors, emotion_color);
-             }
+                ArrayList<Integer> newColors = getNewColors(emotion, palette_type);
+                updateNewColorsInView(newColors, emotion_color);
+            }
 
-             @Override
-             public void onNothingSelected(AdapterView<?> adapterView) { }
-         });
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+            }
+        });
 
 
         paletteSpinner = (Spinner) findViewById(R.id.palette_spinner);
@@ -175,7 +178,8 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> adapterView) { }
+            public void onNothingSelected(AdapterView<?> adapterView) {
+            }
         });
 
         imageBtnSelect.setOnClickListener(new View.OnClickListener() {
@@ -195,7 +199,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                     ivImage2.setImageBitmap(bmp);
 
                     //Hide sliders if value k changes
-                    for(int i = K_COLOR_PICKER.getValue(); i < SLIDER_LAYOUT.getChildCount(); i++){
+                    for (int i = K_COLOR_PICKER.getValue(); i < SLIDER_LAYOUT.getChildCount(); i++) {
                         SeekBar slider = (SeekBar) SLIDER_LAYOUT.getChildAt(i);
                         slider.setVisibility(View.GONE);
                     }
@@ -219,6 +223,20 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
             @Override
             public void onClick(View view) {
                 restartAction();
+            }
+        });
+
+        SAVE_BUTTON.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(IVIMAGE_HAS_BITMAP) {
+                    Bitmap bmp = ((BitmapDrawable) ivImage2.getDrawable()).getBitmap();
+                    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                    String fileName = LOGO_MOTION_IMAGE_NAME + "_colored_" + timeStamp;
+                    saveImage(bmp, fileName, 100);
+                    String msg = fileName + " saved";
+                    Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }
@@ -268,7 +286,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         switch (requestCode) {
-            case Utility.MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE:
+            case Utility.MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     if (userChosenTask.equals("Take Photo"))
                         cameraIntent();
@@ -309,7 +327,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         bm = bm.copy(Bitmap.Config.ARGB_8888, true);
         String shape = Utility.findShape(this, bm);
         Log.d("image shape:", String.valueOf(shape));
-        bm = manipulateBitmap(bm,K_COLOR_PICKER.getValue());
+        bm = manipulateBitmap(bm, K_COLOR_PICKER.getValue());
         ivImage2.setImageBitmap(bm);
     }
 
@@ -317,24 +335,9 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
     // add photo to gallery
     private void onTakePhotoFromCamera(Intent data) {
         Bitmap bmp = (Bitmap) data.getExtras().get("data");
-        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        bmp.compress(Bitmap.CompressFormat.JPEG, 60, bytes);
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        File userImage = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-                LOGO_MOTION_IMAGE_NAME + "_" + timeStamp + "." + LOGO_MOTION_IMAGE_EXTENSION);
-        FileOutputStream fo;
-        try {
-            userImage.createNewFile();
-            fo = new FileOutputStream(userImage);
-            fo.write(bytes.toByteArray());
-            fo.close();
-
-            makeImageAvailableToOthers(userImage);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        String fileName = LOGO_MOTION_IMAGE_NAME + "_original_" + timeStamp;
+        saveImage(bmp, fileName, 60);
         restartAction();
         bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
         ivImage.setImageBitmap(bmp);
@@ -350,6 +353,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
 
         // Tell the media scanner about the new file so that it is
         // immediately available to the user.
+
         MediaScannerConnection.scanFile(this,
                 new String[]{userImage.toString()}, null,
                 new MediaScannerConnection.OnScanCompletedListener() {
@@ -469,7 +473,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                     int shadedColor = Utility.applyShading(pixel, newColorData.getrChange(), newColorData.getgChange(), newColorData.getbChange());
                     bmp.setPixel(x, y, shadedColor);
                 } else {*/
-                    bmp.setPixel(x, y, topColors.get(bestMatchIndex));
+                bmp.setPixel(x, y, topColors.get(bestMatchIndex));
                 //}
             }
         }
@@ -490,14 +494,14 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         //Only change colors if Checkbox is selected
         if (MANIPULATE_TYPE_CHECKBOX.isChecked()) {
             for (int x = 0; x < width; x++) {
-                for (int y = 0; y < height; y++){
+                for (int y = 0; y < height; y++) {
                     ColorData newColorData = colorDataMatrix[x][y];
                     int topColorId = newColorData.getTopColorId();
                     int newColor = NEW_COLORS.get(topColorId);
-                    if(APPLY_SHADING_CHECKBOX.isChecked()) {
+                    if (APPLY_SHADING_CHECKBOX.isChecked()) {
                         newColor = Utility.applyShading(newColor, newColorData.getrChange(), newColorData.getgChange(), newColorData.getbChange());
                     }
-                    bmp.setPixel(x, y,newColor);
+                    bmp.setPixel(x, y, newColor);
                 }
             }
         }
@@ -518,7 +522,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         return bmp;
     }
 
-    private void constructEmotionSpinner(){
+    private void constructEmotionSpinner() {
         // Create an ArrayAdapter using the string array and a default spinner layout
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
                 R.array.emotions_array, android.R.layout.simple_spinner_item);
@@ -528,41 +532,38 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         emotionSpinner.setAdapter(adapter);
     }
 
-    private void constructPaletteSpiner(){
+    private void constructPaletteSpiner() {
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
                 R.array.palette_options, android.R.layout.simple_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         paletteSpinner.setAdapter(adapter);
     }
 
-    private ArrayList<Integer> getNewColors(String emotion, String palette){
+    private ArrayList<Integer> getNewColors(String emotion, String palette) {
         //PALETTES
         ArrayList<Integer> newColors = new ArrayList<>();
         Integer emotion_color = getResources().getColor(Utility.getColorFromEmotions(emotion.toLowerCase())) & 0xFFFFFF;
 
         if (palette.equals("Monochromatic")) {
             newColors = Utility.getMonochromaticColors(emotion_color, K_COLOR_PICKER.getValue());
-        }
-        else if (palette.equals("Complementary")) {
+        } else if (palette.equals("Complementary")) {
             newColors = Utility.getComplementaryColorPalette(emotion_color, K_COLOR_PICKER.getValue());
-        }
-        else if (palette.equals("Analogous")) {
+        } else if (palette.equals("Analogous")) {
             newColors = Utility.getAnalogousColorPalette(emotion_color, K_COLOR_PICKER.getValue());
-        }
-        else if(palette.equals("Triad")){
+        } else if (palette.equals("Triad")) {
             newColors = Utility.getTriadColorPalette(emotion_color, K_COLOR_PICKER.getValue());
         }
 
         return newColors;
     }
 
-    private void updateNewColorsInView(ArrayList<Integer> newColors, int baseColor){
+    private void updateNewColorsInView(ArrayList<Integer> newColors, int baseColor) {
         //Set global NEW_COLORS array
         NEW_COLORS.remove(0);
-        NEW_COLORS.add(0,baseColor);
-        for(int i = 1; i <= newColors.size(); i++){
+        NEW_COLORS.add(0, baseColor);
+        for (int i = 1; i <= newColors.size(); i++) {
             NEW_COLORS.remove(i);
-            NEW_COLORS.add(i,newColors.get(i-1));
+            NEW_COLORS.add(i, newColors.get(i - 1));
         }
         for (int i = newColors.size() + 1; i < 5; i++) {
             NEW_COLORS.remove(i);
@@ -587,10 +588,10 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
     }
 
     @Override
-    public void onClick(View v){
+    public void onClick(View v) {
         Button b = (Button) findViewById(v.getId());
         //Only allow 1 background color at a time
-        if(!BACKGROUND_CHOSEN) {
+        if (!BACKGROUND_CHOSEN) {
             BACKGROUND_CHOSEN = true;
             BACKGROUND_COLOR_ID = b.getId();
             b.setTextColor(Color.BLACK);
@@ -602,15 +603,14 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                 b.setText(R.string.BACKGROUND);
                 setColorAsBackground(b);
             }
-        }
-        else if (BACKGROUND_COLOR_ID == b.getId()) {
+        } else if (BACKGROUND_COLOR_ID == b.getId()) {
             BACKGROUND_CHOSEN = false;
             b.setText("");
             NEW_COLORS = new ArrayList<>(saved_NEW_COLORS);
 
             //Save slider progress
             saved_SLIDER_PROGRESS.clear();
-            for(int i = 0; i < SLIDER_LAYOUT.getChildCount(); i++){
+            for (int i = 0; i < SLIDER_LAYOUT.getChildCount(); i++) {
                 SeekBar slider = (SeekBar) SLIDER_LAYOUT.getChildAt(i);
                 saved_SLIDER_PROGRESS.add(slider.getProgress());
             }
@@ -631,7 +631,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
 
             //Restore sliders
             setupSliders();
-            for(int i = 0; i < SLIDER_LAYOUT.getChildCount() && i < saved_SLIDER_PROGRESS.size(); i++){
+            for (int i = 0; i < SLIDER_LAYOUT.getChildCount() && i < saved_SLIDER_PROGRESS.size(); i++) {
                 SeekBar slider = (SeekBar) SLIDER_LAYOUT.getChildAt(i);
                 slider.setProgress(saved_SLIDER_PROGRESS.get(i));
             }
@@ -639,7 +639,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
     }
 
 
-    public void setColorAsBackground(Button b){
+    public void setColorAsBackground(Button b) {
         ColorDrawable bgColorDrawable = (ColorDrawable) b.getBackground();
         int bgColor = bgColorDrawable.getColor() & 0xFFFFFF;
 
@@ -649,15 +649,15 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
 
             int target_color = bgColor;
             int child_index = -1;
-            if(MANIPULATE_TYPE_CHECKBOX.isChecked()){
+            if (MANIPULATE_TYPE_CHECKBOX.isChecked()) {
                 //Save new colors first so you can go back.
                 saved_NEW_COLORS = new ArrayList<>(NEW_COLORS);
 
                 //Based on NEW_COLORS
                 LinearLayout linearLayout = (LinearLayout) findViewById(R.id.topColorsLayout);
-                for (int i = 0; i < linearLayout.getChildCount(); i++){
+                for (int i = 0; i < linearLayout.getChildCount(); i++) {
                     Button child = (Button) linearLayout.getChildAt(i);
-                    if (child.getId() == b.getId()){
+                    if (child.getId() == b.getId()) {
                         child_index = i;
                         break;
                     }
@@ -665,7 +665,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                 //Create new set of NEW_COLORS where Color.White replaces the background color
                 //  Also, all colors are shifted to the right so that more important colors
                 //  stay in the modified image
-                if(SHIFT_NEW_COLORS_CHECKBOX.isChecked()) {
+                if (SHIFT_NEW_COLORS_CHECKBOX.isChecked()) {
                     for (int i = NEW_COLORS.size() - 1; i >= 0; i--) {
                         NEW_COLORS.remove(i);
                         if (i != child_index) {
@@ -675,14 +675,12 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                             break;
                         }
                     }
-                }
-                else{
+                } else {
                     NEW_COLORS.remove(child_index);
                     NEW_COLORS.add(child_index, Color.WHITE);
                 }
-                manipulateBitmap(bmp,K_COLOR_PICKER.getValue());
-            }
-            else {
+                manipulateBitmap(bmp, K_COLOR_PICKER.getValue());
+            } else {
                 for (int x = 0; x < bmp.getWidth(); x++) {
                     for (int y = 0; y < bmp.getHeight(); y++) {
                         int pixel = bmp.getPixel(x, y) & 0xffffff;
@@ -698,9 +696,9 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         }
     }
 
-    public void resetTopColorsBackgroundStatus(){
+    public void resetTopColorsBackgroundStatus() {
         LinearLayout linearLayout = (LinearLayout) findViewById(R.id.topColorsLayout);
-        for (int i = 0; i < linearLayout.getChildCount(); i++){
+        for (int i = 0; i < linearLayout.getChildCount(); i++) {
             Button child = (Button) linearLayout.getChildAt(i);
             child.setText("");
         }
@@ -715,19 +713,23 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         updateNewColorsInView(newColors, emotion_color);
     }
 
-    public void resetNewColors(){
+    public void resetNewColors() {
         NEW_COLORS.clear();
-        NEW_COLORS.add(0); NEW_COLORS.add(0); NEW_COLORS.add(0); NEW_COLORS.add(0); NEW_COLORS.add(0);
+        NEW_COLORS.add(0);
+        NEW_COLORS.add(0);
+        NEW_COLORS.add(0);
+        NEW_COLORS.add(0);
+        NEW_COLORS.add(0);
     }
 
-    public void restartAction(){
+    public void restartAction() {
         resetTopColorsBackgroundStatus();
         MANIPULATE_TYPE_CHECKBOX.setChecked(false);
         APPLY_SHADING_CHECKBOX.setChecked(false);
         SHIFT_NEW_COLORS_CHECKBOX.setChecked(false);
         BACKGROUND_CHOSEN = false;
 
-        if(IVIMAGE_HAS_BITMAP) {
+        if (IVIMAGE_HAS_BITMAP) {
             //Re-do manipulateBitmap
             Bitmap bmp = ((BitmapDrawable) ivImage.getDrawable()).getBitmap();
             bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
@@ -736,24 +738,23 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         }
     }
 
-    public void setupSliders(){
+    public void setupSliders() {
         int k = NEW_COLORS.size();
         int numSliders = SLIDER_LAYOUT.getChildCount();
-        for(int i = 0; i < numSliders && i < k; i++){
+        for (int i = 0; i < numSliders && i < k; i++) {
             SeekBar sliderX = (SeekBar) SLIDER_LAYOUT.getChildAt(i);
             ImageView iv = (ImageView) NEW_COLORS_LAYOUT.getChildAt(i);
             HSLColor hslColorX;
             try {
                 int newColorX = ((ColorDrawable) iv.getBackground()).getColor();
                 hslColorX = new HSLColor(Color.valueOf(newColorX));
-            }
-            catch(NullPointerException e) {
+            } catch (NullPointerException e) {
                 continue;
             }
-            sliderX.setProgress((int)hslColorX.getLuminance());
+            sliderX.setProgress((int) hslColorX.getLuminance());
             sliderX.setVisibility(View.VISIBLE);
         }
-        for(int i = K_COLOR_PICKER.getValue(); i < SLIDER_LAYOUT.getChildCount(); i++){
+        for (int i = K_COLOR_PICKER.getValue(); i < SLIDER_LAYOUT.getChildCount(); i++) {
             SeekBar sliderX = (SeekBar) SLIDER_LAYOUT.getChildAt(i);
             sliderX.setVisibility(View.GONE);
         }
@@ -765,7 +766,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         int progress = seekBar.getProgress();
         ImageView iv;
         int index = 0;
-        switch(id){
+        switch (id) {
             case R.id.slider1: {
                 iv = (ImageView) findViewById(R.id.newColor1);
                 index = 0;
@@ -800,13 +801,13 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
         HSLColor hslColor;
         int intColor = ((ColorDrawable) iv.getBackground()).getColor();
         hslColor = new HSLColor(Color.valueOf(intColor));
-        Color adjustedColor = hslColor.adjustLuminance((float)progress);
+        Color adjustedColor = hslColor.adjustLuminance((float) progress);
         int adjustedIntColor = Utility.getIntFromColor(adjustedColor);
         //Set newColor ImageView
         iv.setBackgroundColor(adjustedIntColor);
         //Set NEW_COLORS arraylist value
         NEW_COLORS.remove(index);
-        NEW_COLORS.add(index,adjustedIntColor);
+        NEW_COLORS.add(index, adjustedIntColor);
     }
 
     @Override
@@ -814,9 +815,29 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
     }
 
     @Override
-    public void onProgressChanged(SeekBar seekBar, int progress,boolean fromUser) {
+    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 
 
+    }
+
+    private void saveImage(Bitmap bmp, String fileName, int quality) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        bmp.compress(Bitmap.CompressFormat.JPEG, quality, bytes);
+
+        File userImage = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), fileName);
+        FileOutputStream fo;
+        try {
+            userImage.createNewFile();
+            fo = new FileOutputStream(userImage);
+            fo.write(bytes.toByteArray());
+            fo.close();
+
+            makeImageAvailableToOthers(userImage);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 
