@@ -172,7 +172,7 @@
                 android:padding="10dip">
 
                 <ImageView
-                    android:id="@+id/newColors1"
+                    android:id="@+id/newColor1"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:layout_weight="1" />
@@ -200,6 +200,60 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:layout_weight="1" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/sliderLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_weight="5">
+
+                <SeekBar
+                    android:id="@+id/slider1"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:min="0"
+                    android:max="100"
+                    android:layout_weight="1"
+                    android:visibility="gone" />
+
+                <SeekBar
+                    android:id="@+id/slider2"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:min="0"
+                    android:max="100"
+                    android:layout_weight="1"
+                    android:visibility="gone" />
+
+                <SeekBar
+                    android:id="@+id/slider3"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:min="0"
+                    android:max="100"
+                    android:layout_weight="1"
+                    android:visibility="gone" />
+
+                <SeekBar
+                    android:id="@+id/slider4"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:min="0"
+                    android:max="100"
+                    android:layout_weight="1"
+                    android:visibility="gone" />
+
+                <SeekBar
+                    android:id="@+id/slider5"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:min="0"
+                    android:max="100"
+                    android:layout_weight="1"
+                    android:visibility="gone" />
 
             </LinearLayout>
 

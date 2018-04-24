@@ -393,8 +393,8 @@ public class HSLColor
 		g = Math.min(g, 1.0f);
 		b = Math.min(b, 1.0f);
 
-		return Color.valueOf(r,g,b,1.0f);
-		//return new Color(r, g, b, alpha);
+
+		return Color.valueOf(((int)(255*alpha) << 24) + (((int)(255*r) << 16) + ((int)(255*g) << 8) + ((int)(255*b))));
 	}
 
 	private static float HueToRGB(float p, float q, float h)
@@ -418,6 +418,6 @@ public class HSLColor
 			return p + ( (q - p) * 6 * ((2.0f / 3.0f) - h) );
 		}
 
-   		return p;
+		return p;
 	}
 }
