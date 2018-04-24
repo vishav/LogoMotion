@@ -232,7 +232,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
                 if(IVIMAGE_HAS_BITMAP) {
                     Bitmap bmp = ((BitmapDrawable) ivImage2.getDrawable()).getBitmap();
                     String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-                    String fileName = LOGO_MOTION_IMAGE_NAME + "_colored_" + timeStamp;
+                    String fileName = LOGO_MOTION_IMAGE_NAME + "_colored_" + timeStamp + "." + LOGO_MOTION_IMAGE_EXTENSION;
                     saveImage(bmp, fileName, 100);
                     String msg = fileName + " saved";
                     Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
@@ -336,7 +336,7 @@ public class LogoMotionActivity extends AppCompatActivity implements View.OnClic
     private void onTakePhotoFromCamera(Intent data) {
         Bitmap bmp = (Bitmap) data.getExtras().get("data");
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String fileName = LOGO_MOTION_IMAGE_NAME + "_original_" + timeStamp;
+        String fileName = LOGO_MOTION_IMAGE_NAME + "_original_" + timeStamp + "." + LOGO_MOTION_IMAGE_EXTENSION;
         saveImage(bmp, fileName, 60);
         restartAction();
         bmp = bmp.copy(Bitmap.Config.ARGB_8888, true);
